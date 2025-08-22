@@ -2,6 +2,7 @@ package builder
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
 
 	"github.com/adrg/frontmatter"
@@ -14,7 +15,7 @@ func (p CollectFrontMatter) Transform(asset *Asset) error {
 
 	rest, err := frontmatter.Parse(bytes.NewReader(asset.Data), &meta)
 	if err != nil {
-		return err
+		return fmt.Errorf("issue in asset %s: %w", asset.Path, err)
 	}
 
 	if asset.Meta == nil {
