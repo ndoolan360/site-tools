@@ -8,9 +8,8 @@ import (
 )
 
 type TemplateTransformer struct {
-	WrapperTemplate *WrapperTemplate
-	Components      map[string]*Asset
-	GlobalData      map[string]any
+	Components map[string]*Asset
+	GlobalData map[string]any
 }
 
 type WrapperTemplate struct {
@@ -19,6 +18,14 @@ type WrapperTemplate struct {
 }
 
 func (t TemplateTransformer) Transform(asset *Asset) error {
+	return t.transform(asset, nil)
+}
+
+func (t TemplateTransformer) TransformWithWrapper(asset *Asset, wrapperTemplate WrapperTemplate) error {
+	return t.transform(asset, &wrapperTemplate)
+}
+
+func (t TemplateTransformer) transform(asset *Asset, wrapperTemplate *WrapperTemplate) error {
 	if asset.Path == "/base_template.html" {
 		return nil
 	}
@@ -29,10 +36,10 @@ func (t TemplateTransformer) Transform(asset *Asset) error {
 		"Asset":  asset.Meta,
 	}
 
-	if t.WrapperTemplate != nil {
-		primarySource = t.WrapperTemplate.Template.Data
-		templateMeta["WrapperTemplate"] = t.WrapperTemplate.Template.Meta
-		maps.Copy(templateMeta, t.WrapperTemplate.Template.Meta)
+	if wrapperTemplate != nil {
+		primarySource = wrapperTemplate.Template.Data
+		templateMeta["WrapperTemplate"] = wrapperTemplate.Template.Meta
+		maps.Copy(templateMeta, wrapperTemplate.Template.Meta)
 	} else {
 		primarySource = asset.Data
 	}
@@ -54,8 +61,8 @@ func (t TemplateTransformer) Transform(asset *Asset) error {
 		}
 	}
 
-	if t.WrapperTemplate != nil {
-		tmpl, err = tmpl.New(t.WrapperTemplate.ChildBlockName).Parse(string(asset.Data))
+	if wrapperTemplate != nil {
+		tmpl, err = tmpl.New(wrapperTemplate.ChildBlockName).Parse(string(asset.Data))
 		if err != nil {
 			return err
 		}

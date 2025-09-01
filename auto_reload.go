@@ -11,7 +11,7 @@ type AddAutoReload struct {
 	Timeout       int
 }
 
-func (auto *AddAutoReload) Transform(asset *Asset) error {
+func (auto AddAutoReload) Transform(asset *Asset) error {
 	if path.Ext(asset.Path) != ".html" {
 		return nil
 	}

@@ -4,7 +4,59 @@ import (
 	"testing"
 )
 
-func TestTemplateTransformer_Transform_WithComponents_AndWrapper(t *testing.T) {
+func TestTemplate_Transform_WithComponents(t *testing.T) {
+
+	asset := &Asset{
+		Path: "/page.html",
+		Data: []byte(`{{ template "comp1" . }}<p>{{ .PageContent }}</p>`),
+		Meta: map[string]any{
+			"PageContent": "Page specific stuff",
+			"Title":       "Wrapped Page with Component",
+		},
+	}
+
+	component1 := &Asset{
+		Path: "/components/comp1.html",
+		Data: []byte(`<comp1>Component 1: {{ .Global.Comp1Data }}</comp1>`),
+	}
+
+	err := TemplateTransformer{
+		Components: map[string]*Asset{"comp1": component1},
+		GlobalData: map[string]any{"Comp1Data": "Global for Comp1"},
+	}.Transform(asset)
+	if err != nil {
+		t.Fatalf("Transform returned an unexpected error: %v", err)
+	}
+
+	expectedData := `<comp1>Component 1: Global for Comp1</comp1><p>Page specific stuff</p>`
+	if string(asset.Data) != expectedData {
+		t.Errorf("Transform with components did not produce the expected output.\nExpected:\n%s\nGot:\n%s", expectedData, string(asset.Data))
+	}
+}
+
+func TestTemplate_Transform_WithMalformedComponent(t *testing.T) {
+	asset := &Asset{
+		Path: "/page.html",
+		Data: []byte(`{{ template "bad_comp" . }}`),
+		Meta: map[string]any{},
+	}
+	badComponent := &Asset{
+		Path: "/components/bad.html",
+		Data: []byte("{{ .Global.Unclosed "), // Malformed
+		Meta: map[string]any{},
+	}
+	transformer := TemplateTransformer{
+		Components: map[string]*Asset{
+			"bad_comp": badComponent,
+		},
+	}
+	err := transformer.Transform(asset)
+	if err == nil {
+		t.Fatal("Transform expected an error due to malformed component template, but got nil")
+	}
+}
+
+func TestTemplate_TransformWithWrapper_WithComponents(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
 		Data: []byte(`{{ template "comp1" . }}<p>{{ .PageContent }}</p>`),
@@ -36,10 +88,6 @@ func TestTemplateTransformer_Transform_WithComponents_AndWrapper(t *testing.T) {
 			"Comp1Data": "Global for Comp1",
 			"Comp2Data": "Global for Comp2",
 		},
-		WrapperTemplate: &WrapperTemplate{
-			Template:       wrapperAsset,
-			ChildBlockName: "content",
-		},
 		Components: map[string]*Asset{
 			"comp1":          component1,
 			"comp2":          component2,
@@ -47,7 +95,10 @@ func TestTemplateTransformer_Transform_WithComponents_AndWrapper(t *testing.T) {
 		},
 	}
 
-	err := transformer.Transform(asset)
+	err := transformer.TransformWithWrapper(asset, WrapperTemplate{
+		Template:       wrapperAsset,
+		ChildBlockName: "content",
+	})
 	if err != nil {
 		t.Fatalf("Transform returned an unexpected error: %v", err)
 	}
@@ -58,7 +109,7 @@ func TestTemplateTransformer_Transform_WithComponents_AndWrapper(t *testing.T) {
 	}
 }
 
-func TestTemplateTransformer_Transform_TemplateParseError_Wrapper(t *testing.T) {
+func TestTemplate_TransformWithWrapper_MalformedWrapper(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
 		Data: []byte("Page content"),
@@ -69,36 +120,12 @@ func TestTemplateTransformer_Transform_TemplateParseError_Wrapper(t *testing.T) 
 		Data: []byte("{{ define \"content\" }} {{ end }} {{ .Global.Unclosed "), // Malformed
 		Meta: map[string]any{},
 	}
-	transformer := TemplateTransformer{
-		WrapperTemplate: &WrapperTemplate{
-			Template:       wrapperAsset,
-			ChildBlockName: "content",
-		},
-	}
-	err := transformer.Transform(asset)
+	transformer := TemplateTransformer{}
+	err := transformer.TransformWithWrapper(asset, WrapperTemplate{
+		Template:       wrapperAsset,
+		ChildBlockName: "content",
+	})
 	if err == nil {
 		t.Fatal("Transform expected an error due to malformed wrapper template, but got nil")
-	}
-}
-
-func TestTemplateTransformer_Transform_TemplateParseError_Component(t *testing.T) {
-	asset := &Asset{
-		Path: "/page.html",
-		Data: []byte(`{{ template "bad_comp" . }}`),
-		Meta: map[string]any{},
-	}
-	badComponent := &Asset{
-		Path: "/components/bad.html",
-		Data: []byte("{{ .Global.Unclosed "), // Malformed
-		Meta: map[string]any{},
-	}
-	transformer := TemplateTransformer{
-		Components: map[string]*Asset{
-			"bad_comp": badComponent,
-		},
-	}
-	err := transformer.Transform(asset)
-	if err == nil {
-		t.Fatal("Transform expected an error due to malformed component template, but got nil")
 	}
 }
