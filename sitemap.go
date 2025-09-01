@@ -1,5 +1,7 @@
 package sitetools
 
+import "fmt"
+
 func (build *Build) AddSitemap(url string, filters ...Filter) error {
 	if len(build.Assets) == 0 {
 		return nil
@@ -14,7 +16,8 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 	for _, asset := range build.Assets.Filter(filters...) {
 		data = append(data, []byte("  <url>\n")...)
 		data = append(data, []byte("    <loc>"+url+asset.Path+"</loc>\n")...)
-		acceptableModifiedKeys := []string{"LastModified", "Modified", "Date"}
+
+		acceptableModifiedKeys := []string{"SitemapLastModified", "LastModified"}
 		for _, key := range acceptableModifiedKeys {
 			if modified, ok := asset.Meta[key]; ok {
 				if modifiedStr, ok := modified.(string); ok {
@@ -23,6 +26,31 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 				}
 			}
 		}
+
+		acceptablePriorityKeys := []string{"SitemapPriority", "Priority"}
+		for _, key := range acceptablePriorityKeys {
+			if priority, ok := asset.Meta[key]; ok {
+				switch priority.(type) {
+				case float32, float64, int, int32, int64:
+					data = append(data, []byte("    <priority>"+fmt.Sprintf("%.1f", priority)+"</priority>\n")...)
+					break
+				case string:
+					data = append(data, []byte("    <priority>"+priority.(string)+"</priority>\n")...)
+					break
+				}
+			}
+		}
+
+		acceptableChangeFreqKeys := []string{"SitemapChangeFreq", "ChangeFreq"}
+		for _, key := range acceptableChangeFreqKeys {
+			if changeFreq, ok := asset.Meta[key]; ok {
+				if changeFreqStr, ok := changeFreq.(string); ok {
+					data = append(data, []byte("    <changefreq>"+changeFreqStr+"</changefreq>\n")...)
+					break
+				}
+			}
+		}
+
 		data = append(data, []byte("  </url>\n")...)
 	}
 
