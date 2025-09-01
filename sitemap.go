@@ -1,6 +1,6 @@
 package sitetools
 
-func (build *Build) AddSitemap() (*Asset, error) {
+func (build *Build) AddSitemap(filters ...Filter) (*Asset, error) {
 	if len(build.Assets) == 0 {
 		return nil, nil
 	}
@@ -9,11 +9,9 @@ func (build *Build) AddSitemap() (*Asset, error) {
 	data = append(data, []byte(`<?xml version="1.0" encoding="UTF-8"?>`+"\n")...)
 	data = append(data, []byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`+"\n")...)
 
-	for _, asset := range build.Assets.Filter(
-		WithExtensions(".html"),
-		WithoutMeta("Draft"),
-		WithoutMeta("SitemapExclude"),
-	) {
+	filters = append(filters, WithoutMeta("SitemapExclude"))
+
+	for _, asset := range build.Assets.Filter(filters...) {
 		data = append(data, []byte("  <url>\n")...)
 		data = append(data, []byte("    <loc>https://ndoolan.com"+asset.Path+"</loc>\n")...)
 		acceptableModifiedKeys := []string{"LastModified", "Modified", "Date"}

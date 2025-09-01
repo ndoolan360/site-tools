@@ -32,6 +32,9 @@ func TestAddSitemap(t *testing.T) {
 	<url>
 		<loc>https://ndoolan.com/contact.html</loc>
 	</url>
+	<url>
+		<loc>https://ndoolan.com/styles.css</loc>
+	</url>
 </urlset>`)}
 
 	// Minified expected data
@@ -49,6 +52,37 @@ func TestAddSitemap(t *testing.T) {
 	contentType, ok := sitemap.Meta["ContentType"].(string)
 	if !ok || contentType != "application/xml" {
 		t.Errorf("Expected ContentType to be 'application/xml', got '%v'", sitemap.Meta["ContentType"])
+	}
+}
+
+func TestAddSitemap_WithExclusion(t *testing.T) {
+	build := &Build{
+		Assets: Assets{
+			&Asset{Path: "/index.html"},
+			&Asset{Path: "/about.html", Meta: map[string]any{"SitemapExclude": true}},
+		},
+	}
+
+	sitemap, err := build.AddSitemap()
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if sitemap == nil {
+		t.Fatal("Expected sitemap asset, got nil")
+	}
+
+	expectedAsset := &Asset{Path: "expectedSitemap.xml", Data: []byte(`
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+	<url><loc>https://ndoolan.com/index.html</loc></url>
+</urlset>`)}
+
+	// Minified expected data
+	min := MinifyTransformer{}
+	min.Transform(expectedAsset)
+
+	if string(sitemap.Data) != string(expectedAsset.Data) {
+		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), string(expectedAsset.Data))
 	}
 }
 
