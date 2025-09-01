@@ -4,8 +4,7 @@ import (
 	"testing"
 )
 
-func TestTemplate_Transform_WithComponents(t *testing.T) {
-
+func TestTemplate_WithComponents(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
 		Data: []byte(`{{ template "comp1" . }}<p>{{ .PageContent }}</p>`),
@@ -34,7 +33,7 @@ func TestTemplate_Transform_WithComponents(t *testing.T) {
 	}
 }
 
-func TestTemplate_Transform_WithMalformedComponent(t *testing.T) {
+func TestTemplate_WithMalformedComponent(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
 		Data: []byte(`{{ template "bad_comp" . }}`),
@@ -56,7 +55,7 @@ func TestTemplate_Transform_WithMalformedComponent(t *testing.T) {
 	}
 }
 
-func TestTemplate_TransformWithWrapper_WithComponents(t *testing.T) {
+func TestWrapperTemplate_WithComponents(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
 		Data: []byte(`{{ template "comp1" . }}<p>{{ .PageContent }}</p>`),
@@ -83,22 +82,25 @@ func TestTemplate_TransformWithWrapper_WithComponents(t *testing.T) {
 		Meta: map[string]any{},
 	}
 
-	transformer := TemplateTransformer{
-		GlobalData: map[string]any{
-			"Comp1Data": "Global for Comp1",
-			"Comp2Data": "Global for Comp2",
+	transformer := WrapperTemplateTransformer{
+		TemplateTransformer: TemplateTransformer{
+			GlobalData: map[string]any{
+				"Comp1Data": "Global for Comp1",
+				"Comp2Data": "Global for Comp2",
+			},
+			Components: map[string]*Asset{
+				"comp1":          component1,
+				"comp2":          component2,
+				"unused-md-comp": {Path: "/components/unused.md", Data: []byte("Unused component")},
+			},
 		},
-		Components: map[string]*Asset{
-			"comp1":          component1,
-			"comp2":          component2,
-			"unused-md-comp": {Path: "/components/unused.md", Data: []byte("Unused component")},
+		WrapperTemplate: WrapperTemplate{
+			Template:       wrapperAsset,
+			ChildBlockName: "content",
 		},
 	}
 
-	err := transformer.TransformWithWrapper(asset, WrapperTemplate{
-		Template:       wrapperAsset,
-		ChildBlockName: "content",
-	})
+	err := transformer.Transform(asset)
 	if err != nil {
 		t.Fatalf("Transform returned an unexpected error: %v", err)
 	}
@@ -109,7 +111,7 @@ func TestTemplate_TransformWithWrapper_WithComponents(t *testing.T) {
 	}
 }
 
-func TestTemplate_TransformWithWrapper_MalformedWrapper(t *testing.T) {
+func TestWrapperTemplate_MalformedWrapper(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
 		Data: []byte("Page content"),
@@ -120,11 +122,13 @@ func TestTemplate_TransformWithWrapper_MalformedWrapper(t *testing.T) {
 		Data: []byte("{{ define \"content\" }} {{ end }} {{ .Global.Unclosed "), // Malformed
 		Meta: map[string]any{},
 	}
-	transformer := TemplateTransformer{}
-	err := transformer.TransformWithWrapper(asset, WrapperTemplate{
-		Template:       wrapperAsset,
-		ChildBlockName: "content",
-	})
+	transformer := WrapperTemplateTransformer{
+		WrapperTemplate: WrapperTemplate{
+			Template:       wrapperAsset,
+			ChildBlockName: "content",
+		},
+	}
+	err := transformer.Transform(asset)
 	if err == nil {
 		t.Fatal("Transform expected an error due to malformed wrapper template, but got nil")
 	}

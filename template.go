@@ -12,6 +12,11 @@ type TemplateTransformer struct {
 	GlobalData map[string]any
 }
 
+type WrapperTemplateTransformer struct {
+	TemplateTransformer
+	WrapperTemplate
+}
+
 type WrapperTemplate struct {
 	Template       *Asset
 	ChildBlockName string
@@ -21,8 +26,8 @@ func (t TemplateTransformer) Transform(asset *Asset) error {
 	return t.transform(asset, nil)
 }
 
-func (t TemplateTransformer) TransformWithWrapper(asset *Asset, wrapperTemplate WrapperTemplate) error {
-	return t.transform(asset, &wrapperTemplate)
+func (t WrapperTemplateTransformer) Transform(asset *Asset) error {
+	return t.transform(asset, &t.WrapperTemplate)
 }
 
 func (t TemplateTransformer) transform(asset *Asset, wrapperTemplate *WrapperTemplate) error {
