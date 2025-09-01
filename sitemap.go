@@ -1,8 +1,8 @@
 package sitetools
 
-func (build *Build) AddSitemap(url string, filters ...Filter) (*Asset, error) {
+func (build *Build) AddSitemap(url string, filters ...Filter) error {
 	if len(build.Assets) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	data := make([]byte, 0)
@@ -37,12 +37,14 @@ func (build *Build) AddSitemap(url string, filters ...Filter) (*Asset, error) {
 	min := MinifyTransformer{}
 	min.Transform(sitemap)
 
-	return sitemap, nil
+	build.Assets = append(build.Assets, sitemap)
+
+	return nil
 }
 
-func (build *Build) AddRobotsTxt(additionalLines ...string) (*Asset, error) {
+func (build *Build) AddRobotsTxt(additionalLines ...string) error {
 	if len(build.Assets) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	data := []byte("User-agent: *\nDisallow: /\n")
@@ -55,5 +57,8 @@ func (build *Build) AddRobotsTxt(additionalLines ...string) (*Asset, error) {
 		Data: data,
 		Meta: map[string]any{"ContentType": "text/plain"},
 	}
-	return robots, nil
+
+	build.Assets = append(build.Assets, robots)
+
+	return nil
 }

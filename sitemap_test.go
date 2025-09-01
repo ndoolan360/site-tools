@@ -12,10 +12,11 @@ func TestAddSitemap(t *testing.T) {
 		},
 	}
 
-	sitemap, err := build.AddSitemap("https://test.com")
+	err := build.AddSitemap("https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	sitemap := build.Assets.Filter(WithPath("/sitemap.xml"))[0]
 	if sitemap == nil {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
@@ -63,10 +64,11 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 		},
 	}
 
-	sitemap, err := build.AddSitemap("https://test.com")
+	err := build.AddSitemap("https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	sitemap := build.Assets.Filter(WithPath("/sitemap.xml"))[0]
 	if sitemap == nil {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
@@ -93,10 +95,11 @@ func TestAddRobotsTxt(t *testing.T) {
 		},
 	}
 
-	robots, err := build.AddRobotsTxt("Sitemap: https://example.com/sitemap.xml")
+	err := build.AddRobotsTxt("Sitemap: https://example.com/sitemap.xml")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
+	robots := build.Assets.Filter(WithPath("/robots.txt"))[0]
 	if robots == nil {
 		t.Fatal("Expected robots.txt asset, got nil")
 	}
