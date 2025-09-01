@@ -21,29 +21,9 @@ func TestAddSitemap(t *testing.T) {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
 
-	expectedAsset := &Asset{Path: "expectedSitemap.xml", Data: []byte(`
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url>
-		<loc>https://test.com/index.html</loc>
-	</url>
-	<url>
-		<loc>https://test.com/about.html</loc>
-	</url>
-	<url>
-		<loc>https://test.com/contact.html</loc>
-	</url>
-	<url>
-		<loc>https://test.com/styles.css</loc>
-	</url>
-</urlset>`)}
-
-	// Minified expected data
-	min := MinifyTransformer{}
-	min.Transform(expectedAsset)
-
-	if string(sitemap.Data) != string(expectedAsset.Data) {
-		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), string(expectedAsset.Data))
+	expectedData := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://test.com/index.html</loc></url><url><loc>https://test.com/about.html</loc></url><url><loc>https://test.com/contact.html</loc></url><url><loc>https://test.com/styles.css</loc></url></urlset>`
+	if string(sitemap.Data) != expectedData {
+		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), expectedData)
 	}
 
 	if sitemap.Path != "/sitemap.xml" {
@@ -77,22 +57,9 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
 
-	expectedAsset := &Asset{Path: "expectedSitemap.xml", Data: []byte(`
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url><loc>https://test.com/index.html</loc><priority>1.0</priority></url>
-	<url><loc>https://test.com/important.html</loc><priority>0.8</priority></url>
-	<url><loc>https://test.com/about.html</loc><lastmod>2025-08-02</lastmod></url>
-	<url><loc>https://test.com/contact.html</loc></url>
-	<url><loc>https://test.com/styles.css</loc><changefreq>never</changefreq></url>
-</urlset>`)}
-
-	// Minified expected data
-	min := MinifyTransformer{}
-	min.Transform(expectedAsset)
-
-	if string(sitemap.Data) != string(expectedAsset.Data) {
-		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), string(expectedAsset.Data))
+	expectedData := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://test.com/index.html</loc><priority>1.0</priority></url><url><loc>https://test.com/important.html</loc><priority>0.8</priority></url><url><loc>https://test.com/about.html</loc><lastmod>2025-08-02</lastmod></url><url><loc>https://test.com/contact.html</loc></url><url><loc>https://test.com/styles.css</loc><changefreq>never</changefreq></url></urlset>`
+	if string(sitemap.Data) != expectedData {
+		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), expectedData)
 	}
 }
 
