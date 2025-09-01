@@ -1,6 +1,6 @@
 package sitetools
 
-func (build *Build) AddSitemap(filters ...Filter) (*Asset, error) {
+func (build *Build) AddSitemap(url string, filters ...Filter) (*Asset, error) {
 	if len(build.Assets) == 0 {
 		return nil, nil
 	}
@@ -13,7 +13,7 @@ func (build *Build) AddSitemap(filters ...Filter) (*Asset, error) {
 
 	for _, asset := range build.Assets.Filter(filters...) {
 		data = append(data, []byte("  <url>\n")...)
-		data = append(data, []byte("    <loc>https://ndoolan.com"+asset.Path+"</loc>\n")...)
+		data = append(data, []byte("    <loc>"+url+asset.Path+"</loc>\n")...)
 		acceptableModifiedKeys := []string{"LastModified", "Modified", "Date"}
 		for _, key := range acceptableModifiedKeys {
 			if modified, ok := asset.Meta[key]; ok {
@@ -29,7 +29,7 @@ func (build *Build) AddSitemap(filters ...Filter) (*Asset, error) {
 	data = append(data, []byte(`</urlset>`)...)
 
 	sitemap := &Asset{
-		Path: "sitemap.xml",
+		Path: "/sitemap.xml",
 		Data: data,
 		Meta: map[string]any{"ContentType": "application/xml"},
 	}
@@ -51,7 +51,7 @@ func (build *Build) AddRobotsTxt(additionalLines ...string) (*Asset, error) {
 	}
 
 	robots := &Asset{
-		Path: "robots.txt",
+		Path: "/robots.txt",
 		Data: data,
 		Meta: map[string]any{"ContentType": "text/plain"},
 	}

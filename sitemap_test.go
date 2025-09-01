@@ -12,7 +12,7 @@ func TestAddSitemap(t *testing.T) {
 		},
 	}
 
-	sitemap, err := build.AddSitemap()
+	sitemap, err := build.AddSitemap("https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -24,16 +24,16 @@ func TestAddSitemap(t *testing.T) {
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<url>
-		<loc>https://ndoolan.com/index.html</loc>
+		<loc>https://test.com/index.html</loc>
 	</url>
 	<url>
-		<loc>https://ndoolan.com/about.html</loc>
+		<loc>https://test.com/about.html</loc>
 	</url>
 	<url>
-		<loc>https://ndoolan.com/contact.html</loc>
+		<loc>https://test.com/contact.html</loc>
 	</url>
 	<url>
-		<loc>https://ndoolan.com/styles.css</loc>
+		<loc>https://test.com/styles.css</loc>
 	</url>
 </urlset>`)}
 
@@ -45,7 +45,7 @@ func TestAddSitemap(t *testing.T) {
 		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), string(expectedAsset.Data))
 	}
 
-	if sitemap.Path != "sitemap.xml" {
+	if sitemap.Path != "/sitemap.xml" {
 		t.Errorf("Expected sitemap path to be 'sitemap.xml', got '%s'", sitemap.Path)
 	}
 
@@ -63,7 +63,7 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 		},
 	}
 
-	sitemap, err := build.AddSitemap()
+	sitemap, err := build.AddSitemap("https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 	expectedAsset := &Asset{Path: "expectedSitemap.xml", Data: []byte(`
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url><loc>https://ndoolan.com/index.html</loc></url>
+	<url><loc>https://test.com/index.html</loc></url>
 </urlset>`)}
 
 	// Minified expected data
@@ -110,7 +110,7 @@ Sitemap: https://example.com/sitemap.xml
 		t.Errorf("Robots.txt data does not match expected.\nGot:\n%s\nExpected:\n%s", string(robots.Data), expectedData)
 	}
 
-	if robots.Path != "robots.txt" {
+	if robots.Path != "/robots.txt" {
 		t.Errorf("Expected robots.txt path to be 'robots.txt', got '%s'", robots.Path)
 	}
 
