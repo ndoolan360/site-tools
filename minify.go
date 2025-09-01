@@ -9,25 +9,28 @@ import (
 	"github.com/tdewolff/minify/v2/html"
 	"github.com/tdewolff/minify/v2/js"
 	"github.com/tdewolff/minify/v2/svg"
+	"github.com/tdewolff/minify/v2/xml"
 )
 
 type MinifyTransformer struct {
 	minifier *minify.M
 }
 
-func (m *MinifyTransformer) getMinifier() *minify.M {
+func (m MinifyTransformer) getMinifier() *minify.M {
 	if m.minifier == nil {
 		m.minifier = minify.New()
 		m.minifier.Add("text/html", &html.Minifier{KeepEndTags: true})
 		m.minifier.Add("text/css", &css.Minifier{})
 		m.minifier.Add("text/javascript", &js.Minifier{})
 		m.minifier.Add("image/svg+xml", &svg.Minifier{})
+		m.minifier.Add("application/xml", &xml.Minifier{})
+		m.minifier.Add("text/xml", &xml.Minifier{})
 	}
 
 	return m.minifier
 }
 
-func (m *MinifyTransformer) Transform(asset *Asset) error {
+func (m MinifyTransformer) Transform(asset *Asset) error {
 	fileType := path.Ext(asset.Path)
 	mimeType := mime.TypeByExtension(fileType)
 
