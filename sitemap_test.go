@@ -63,6 +63,19 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 	}
 }
 
+func TestAddSitemap_EmptyBuild(t *testing.T) {
+	build := &Build{Assets: Assets{}}
+
+	err := build.AddSitemap("https://test.com")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(build.Assets) != 0 {
+		t.Errorf("Expected no assets in build, got %d", len(build.Assets))
+	}
+}
+
 func TestAddRobotsTxt(t *testing.T) {
 	build := &Build{
 		Assets: Assets{
@@ -99,5 +112,18 @@ Sitemap: https://example.com/sitemap.xml
 	contentType, ok := robots.Meta["ContentType"].(string)
 	if !ok || contentType != "text/plain" {
 		t.Errorf("Expected ContentType to be 'text/plain', got '%v'", robots.Meta["ContentType"])
+	}
+}
+
+func TestAddRobotsTxt_EmptyBuild(t *testing.T) {
+	build := &Build{Assets: Assets{}}
+
+	err := build.AddRobotsTxt("Disallow: /private")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(build.Assets) != 0 {
+		t.Errorf("Expected no assets in build, got %d", len(build.Assets))
 	}
 }
