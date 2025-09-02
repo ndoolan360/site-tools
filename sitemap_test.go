@@ -21,29 +21,9 @@ func TestAddSitemap(t *testing.T) {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
 
-	expectedAsset := &Asset{Path: "expectedSitemap.xml", Data: []byte(`
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url>
-		<loc>https://test.com/index.html</loc>
-	</url>
-	<url>
-		<loc>https://test.com/about.html</loc>
-	</url>
-	<url>
-		<loc>https://test.com/contact.html</loc>
-	</url>
-	<url>
-		<loc>https://test.com/styles.css</loc>
-	</url>
-</urlset>`)}
-
-	// Minified expected data
-	min := MinifyTransformer{}
-	min.Transform(expectedAsset)
-
-	if string(sitemap.Data) != string(expectedAsset.Data) {
-		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), string(expectedAsset.Data))
+	expectedData := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://test.com/index.html</loc></url><url><loc>https://test.com/about.html</loc></url><url><loc>https://test.com/contact.html</loc></url><url><loc>https://test.com/styles.css</loc></url></urlset>`
+	if string(sitemap.Data) != expectedData {
+		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), expectedData)
 	}
 
 	if sitemap.Path != "/sitemap.xml" {
@@ -59,8 +39,12 @@ func TestAddSitemap(t *testing.T) {
 func TestAddSitemap_WithExclusion(t *testing.T) {
 	build := &Build{
 		Assets: Assets{
-			&Asset{Path: "/index.html"},
-			&Asset{Path: "/about.html", Meta: map[string]any{"SitemapExclude": true}},
+			&Asset{Path: "/index.html", Meta: map[string]any{"SitemapPriority": 1.0}},
+			&Asset{Path: "/important.html", Meta: map[string]any{"SitemapPriority": "0.8"}},
+			&Asset{Path: "/about.html", Meta: map[string]any{"LastModified": "2025-08-02"}},
+			&Asset{Path: "/contact.html", Meta: map[string]any{"SitemapExclude": false}},
+			&Asset{Path: "/private.html", Meta: map[string]any{"SitemapExclude": true}},
+			&Asset{Path: "/styles.css", Meta: map[string]any{"SitemapChangeFreq": "never"}},
 		},
 	}
 
@@ -73,18 +57,22 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
 
-	expectedAsset := &Asset{Path: "expectedSitemap.xml", Data: []byte(`
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-	<url><loc>https://test.com/index.html</loc></url>
-</urlset>`)}
+	expectedData := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://test.com/index.html</loc><priority>1.0</priority></url><url><loc>https://test.com/important.html</loc><priority>0.8</priority></url><url><loc>https://test.com/about.html</loc><lastmod>2025-08-02</lastmod></url><url><loc>https://test.com/contact.html</loc></url><url><loc>https://test.com/styles.css</loc><changefreq>never</changefreq></url></urlset>`
+	if string(sitemap.Data) != expectedData {
+		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), expectedData)
+	}
+}
 
-	// Minified expected data
-	min := MinifyTransformer{}
-	min.Transform(expectedAsset)
+func TestAddSitemap_EmptyBuild(t *testing.T) {
+	build := &Build{Assets: Assets{}}
 
-	if string(sitemap.Data) != string(expectedAsset.Data) {
-		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), string(expectedAsset.Data))
+	err := build.AddSitemap("https://test.com")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(build.Assets) != 0 {
+		t.Errorf("Expected no assets in build, got %d", len(build.Assets))
 	}
 }
 
@@ -95,7 +83,10 @@ func TestAddRobotsTxt(t *testing.T) {
 		},
 	}
 
-	err := build.AddRobotsTxt("Sitemap: https://example.com/sitemap.xml")
+	err := build.AddRobotsTxt(
+		"Allow: /",
+		"Sitemap: https://example.com/sitemap.xml",
+	)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -106,6 +97,7 @@ func TestAddRobotsTxt(t *testing.T) {
 
 	expectedData := `User-agent: *
 Disallow: /
+Allow: /
 Sitemap: https://example.com/sitemap.xml
 `
 
@@ -120,5 +112,18 @@ Sitemap: https://example.com/sitemap.xml
 	contentType, ok := robots.Meta["ContentType"].(string)
 	if !ok || contentType != "text/plain" {
 		t.Errorf("Expected ContentType to be 'text/plain', got '%v'", robots.Meta["ContentType"])
+	}
+}
+
+func TestAddRobotsTxt_EmptyBuild(t *testing.T) {
+	build := &Build{Assets: Assets{}}
+
+	err := build.AddRobotsTxt("Disallow: /private")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if len(build.Assets) != 0 {
+		t.Errorf("Expected no assets in build, got %d", len(build.Assets))
 	}
 }

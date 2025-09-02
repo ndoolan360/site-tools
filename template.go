@@ -2,6 +2,7 @@ package sitetools
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
 	"path"
 	"text/template"
@@ -9,49 +10,18 @@ import (
 
 type TemplateTransformer struct {
 	Components map[string]*Asset
-	GlobalData map[string]any
-}
-
-type WrapperTemplateTransformer struct {
-	TemplateTransformer
-	WrapperTemplate
-}
-
-type WrapperTemplate struct {
-	Template       *Asset
-	ChildBlockName string
+	Global     map[string]any
 }
 
 func (t TemplateTransformer) Transform(asset *Asset) error {
-	return t.transform(asset, nil)
-}
-
-func (t WrapperTemplateTransformer) Transform(asset *Asset) error {
-	return t.transform(asset, &t.WrapperTemplate)
-}
-
-func (t TemplateTransformer) transform(asset *Asset, wrapperTemplate *WrapperTemplate) error {
-	if asset.Path == "/base_template.html" {
-		return nil
+	if asset.Meta["Global"] != nil {
+		return fmt.Errorf("asset meta cannot contain reserved key 'Global'")
 	}
 
-	var primarySource []byte
-	templateMeta := map[string]any{
-		"Global": t.GlobalData,
-		"Asset":  asset.Meta,
-	}
-
-	if wrapperTemplate != nil {
-		primarySource = wrapperTemplate.Template.Data
-		templateMeta["WrapperTemplate"] = wrapperTemplate.Template.Meta
-		maps.Copy(templateMeta, wrapperTemplate.Template.Meta)
-	} else {
-		primarySource = asset.Data
-	}
-
+	templateMeta := map[string]any{"Global": t.Global}
 	maps.Copy(templateMeta, asset.Meta)
 
-	tmpl, err := template.New("").Parse(string(primarySource))
+	tmpl, err := template.New("").Parse(string(asset.Data))
 	if err != nil {
 		return err
 	}
@@ -66,16 +36,12 @@ func (t TemplateTransformer) transform(asset *Asset, wrapperTemplate *WrapperTem
 		}
 	}
 
-	if wrapperTemplate != nil {
-		tmpl, err = tmpl.New(wrapperTemplate.ChildBlockName).Parse(string(asset.Data))
-		if err != nil {
-			return err
-		}
+	buf := &bytes.Buffer{}
+	if err := tmpl.Lookup("").Option("missingkey=zero").Execute(buf, templateMeta); err != nil {
+		return err
 	}
 
-	buf := &bytes.Buffer{}
-	tmpl.ExecuteTemplate(buf, "", templateMeta)
-
 	asset.Data = buf.Bytes()
+
 	return nil
 }

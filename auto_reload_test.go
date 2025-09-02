@@ -39,6 +39,19 @@ func TestAddAutoReload_Transform(t *testing.T) {
 			expectedData: []byte("body { color: red; }"),
 			expectError:  false,
 		},
+		{
+			name: "HTML file without closing body tag",
+			asset: &Asset{
+				Path: "index.html",
+				Data: []byte("<html><body><h1>Hello World</h1></html>"),
+			},
+			autoReload: &AddAutoReload{
+				WebSocketPath: "/ws",
+				Timeout:       1000,
+			},
+			expectedData: []byte("<html><body><h1>Hello World</h1></html>"),
+			expectError:  false,
+		},
 	}
 
 	for _, tt := range tests {

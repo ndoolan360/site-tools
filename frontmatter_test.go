@@ -86,3 +86,14 @@ func TestCollectFrontMatter_Transform(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectFrontMatter_MalformedFrontMatter(t *testing.T) {
+	asset := &Asset{
+		Data: []byte("{\n'title': 'Unclosed string\n}\n\nContent"),
+	}
+	transformer := CollectFrontMatter{}
+	err := transformer.Transform(asset)
+	if err == nil {
+		t.Fatal("expected an error due to malformed frontmatter, but got nil")
+	}
+}
