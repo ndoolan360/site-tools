@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -65,6 +67,42 @@ func TestFromGit_OutDirWithSubdirectories(t *testing.T) {
 	}
 
 	verifyAssets(t, buildInstance.Assets, map[string]string{"/parentDir/clonedRepo/root_file.txt": "root_content"}, outDir)
+}
+
+func TestWalkBilly_ReadDirError(t *testing.T) {
+	fsys := memfs.New()
+
+	buildInstance := &Build{}
+	err := buildInstance.walkBilly(fsys, "missing", "prefix")
+	if err == nil {
+		t.Fatal("Expected error when root is missing, but got nil")
+	}
+}
+
+func TestWalkBilly_PrefixAndRoot(t *testing.T) {
+	fsys := memfs.New()
+	if err := fsys.MkdirAll("subdir", 0755); err != nil {
+		t.Fatalf("Failed to create subdir: %v", err)
+	}
+	if err := util.WriteFile(fsys, "subdir/file.txt", []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	buildInstance := &Build{}
+	err := buildInstance.walkBilly(fsys, "subdir", "prefix")
+	if err != nil {
+		t.Fatalf("walkBilly failed: %v", err)
+	}
+
+	if len(buildInstance.Assets) != 1 {
+		t.Fatalf("expected 1 asset, got %d", len(buildInstance.Assets))
+	}
+	if buildInstance.Assets[0].Path != "/prefix/subdir/file.txt" {
+		t.Fatalf("expected asset path '/prefix/subdir/file.txt', got '%s'", buildInstance.Assets[0].Path)
+	}
+	if string(buildInstance.Assets[0].Data) != "content" {
+		t.Fatalf("expected asset data 'content', got '%s'", string(buildInstance.Assets[0].Data))
+	}
 }
 
 func setupGitRepo(t *testing.T, files map[string]string, initialBranchName string) (repoPath string, cleanupFunc func()) {
