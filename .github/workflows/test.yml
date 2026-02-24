@@ -3,6 +3,8 @@ name: Test
 on:
   workflow_call:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 1 */2 *"
   pull_request:
     types: [opened, reopened, synchronize]
   push:
