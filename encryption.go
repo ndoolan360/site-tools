@@ -103,7 +103,7 @@ func (t EncryptionTransformer) Transform(asset *Asset) error {
 	saltBase64 := base64.StdEncoding.EncodeToString(salt)
 
 	// Generate the decryption JavaScript
-	decryptionScript := generateDecryptionScript(
+	decryptionScript, err := generateDecryptionScript(
 		encryptedBase64,
 		saltBase64,
 		iterations,
@@ -113,6 +113,9 @@ func (t EncryptionTransformer) Transform(asset *Asset) error {
 		storageMode,
 		t.MinifyScript,
 	)
+	if err != nil {
+		return fmt.Errorf("failed to generate decryption script: %w", err)
+	}
 
 	// Wrap main script in script tags
 	scriptTag := "\n<script>\n" + decryptionScript + "\n</script>\n"
@@ -188,7 +191,7 @@ func generateDecryptionScript(
 	passwordInputID, formID, contentID string,
 	storageMode StorageMode,
 	minifyScript bool,
-) string {
+) (string, error) {
 	// Create an asset for the script template
 	scriptAsset := &Asset{
 		Path: "encryption_template.js",
@@ -196,7 +199,7 @@ func generateDecryptionScript(
 	}
 
 	// Use ReplacerTransformer to replace placeholders
-	ReplacerTransformer{
+	err := ReplacerTransformer{
 		Replacements: map[string]string{
 			"{{.ENCRYPTED_DATA}}":        encryptedData,
 			"{{.ENCRYPTED_DATA_PREFIX}}": encryptedData[:32],
@@ -208,10 +211,16 @@ func generateDecryptionScript(
 			"{{.STORAGE_MODE}}":          string(storageMode),
 		},
 	}.Transform(scriptAsset)
-
-	if minifyScript {
-		MinifyTransformer{}.Transform(scriptAsset)
+	if err != nil {
+		return "", err
 	}
 
-	return string(scriptAsset.Data)
+	if minifyScript {
+		err := MinifyTransformer{}.Transform(scriptAsset)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return string(scriptAsset.Data), nil
 }
