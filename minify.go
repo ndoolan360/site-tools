@@ -1,6 +1,7 @@
 package sitetools
 
 import (
+	"fmt"
 	"mime"
 	"path"
 	"sync"
@@ -36,9 +37,19 @@ func (m MinifyTransformer) Transform(asset *Asset) error {
 	fileType := path.Ext(asset.Path)
 	mimeType := mime.TypeByExtension(fileType)
 
-	if minified, err := getMinifier().Bytes(mimeType, asset.Data); err == nil {
-		asset.Data = minified
+	if mimeType == "" {
+		return nil
 	}
+
+	minified, err := getMinifier().Bytes(mimeType, asset.Data)
+	if err != nil {
+		if err == minify.ErrNotExist {
+			return nil
+		}
+		return fmt.Errorf("minify failed for %s (%s): %w", asset.Path, mimeType, err)
+	}
+
+	asset.Data = minified
 
 	return nil
 }
