@@ -6,6 +6,10 @@ import (
 	"path"
 )
 
+// AddAutoReload is a transformer that injects a script into HTML files to enable
+// auto-reloading when a WebSocket connection is closed.
+// This is useful for development environments where you want the page to automatically
+// refresh when the server restarts or files change. Not really intended for production use.
 type AddAutoReload struct {
 	WebSocketPath string
 	Timeout       int
