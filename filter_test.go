@@ -215,18 +215,21 @@ func TestWithMeta(t *testing.T) {
 	assets := Assets{
 		&Asset{Path: "/test/file1.txt", Meta: map[string]any{"IsDraft": false}},
 		&Asset{Path: "/test/file2.txt", Meta: map[string]any{"IsDraft": true}},
-		&Asset{Path: "/test/file3.md"},
+		&Asset{Path: "/test/file3.txt", Meta: map[string]any{"IsDraft": "false"}},
+		&Asset{Path: "/test/file4.txt", Meta: map[string]any{"IsDraft": "true"}},
+		&Asset{Path: "/test/file5.md"},
 	}
 
 	filtered := assets.Filter(WithMeta("IsDraft"))
-	if len(filtered) != 1 {
-		t.Errorf("Expected 1 assets, got %d", len(filtered))
+	if len(filtered) != 2 {
+		t.Errorf("Expected 2 assets, got %d", len(filtered))
 	}
 
-	for _, asset := range filtered {
-		if !asset.Meta["IsDraft"].(bool) {
-			t.Error("Filtered asset should be a draft")
-		}
+	if filtered[0].Path != "/test/file2.txt" {
+		t.Errorf("Expected /test/file2.txt, got %s", filtered[0].Path)
+	}
+	if filtered[1].Path != "/test/file4.txt" {
+		t.Errorf("Expected /test/file5.txt, got %s", filtered[1].Path)
 	}
 }
 
@@ -234,15 +237,19 @@ func TestWithoutMeta(t *testing.T) {
 	assets := Assets{
 		&Asset{Path: "/test/file1.txt", Meta: map[string]any{"IsDraft": false}},
 		&Asset{Path: "/test/file2.txt", Meta: map[string]any{"IsDraft": true}},
-		&Asset{Path: "/test/file3.md"},
+		&Asset{Path: "/test/file3.txt", Meta: map[string]any{"IsDraft": "false"}},
+		&Asset{Path: "/test/file4.txt", Meta: map[string]any{"IsDraft": "true"}},
+		&Asset{Path: "/test/file5.md"},
 	}
 
 	filtered := assets.Filter(WithoutMeta("IsDraft"))
-	if len(filtered) != 2 {
-		t.Errorf("Expected 2 asset, got %d", len(filtered))
+	if len(filtered) != 3 {
+		t.Errorf("Expected 3 asset, got %d", len(filtered))
 	}
 
-	if filtered[0].Meta["IsDraft"].(bool) {
-		t.Error("Filtered asset should not be a draft")
+	for _, asset := range filtered {
+		if asset.Path == "/test/file2.txt" || asset.Path == "/test/file4.txt" {
+			t.Error("Filtered asset should not be a draft")
+		}
 	}
 }
