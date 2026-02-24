@@ -217,19 +217,24 @@ func TestWithMeta(t *testing.T) {
 		&Asset{Path: "/test/file2.txt", Meta: map[string]any{"IsDraft": true}},
 		&Asset{Path: "/test/file3.txt", Meta: map[string]any{"IsDraft": "false"}},
 		&Asset{Path: "/test/file4.txt", Meta: map[string]any{"IsDraft": "true"}},
-		&Asset{Path: "/test/file5.md"},
+		&Asset{Path: "/test/file5.txt", Meta: map[string]any{"IsDraft": "  FALSE  "}},
+		&Asset{Path: "/test/file6.txt", Meta: map[string]any{"IsDraft": "  TRUE  "}},
+		&Asset{Path: "/test/file7.md"},
 	}
 
 	filtered := assets.Filter(WithMeta("IsDraft"))
-	if len(filtered) != 2 {
-		t.Errorf("Expected 2 assets, got %d", len(filtered))
+	if len(filtered) != 3 {
+		t.Errorf("Expected 3 assets, got %d", len(filtered))
 	}
 
 	if filtered[0].Path != "/test/file2.txt" {
 		t.Errorf("Expected /test/file2.txt, got %s", filtered[0].Path)
 	}
 	if filtered[1].Path != "/test/file4.txt" {
-		t.Errorf("Expected /test/file5.txt, got %s", filtered[1].Path)
+		t.Errorf("Expected /test/file4.txt, got %s", filtered[1].Path)
+	}
+	if filtered[2].Path != "/test/file6.txt" {
+		t.Errorf("Expected /test/file6.txt, got %s", filtered[2].Path)
 	}
 }
 
@@ -239,7 +244,9 @@ func TestWithoutMeta(t *testing.T) {
 		&Asset{Path: "/test/file2.txt", Meta: map[string]any{"IsDraft": true}},
 		&Asset{Path: "/test/file3.txt", Meta: map[string]any{"IsDraft": "false"}},
 		&Asset{Path: "/test/file4.txt", Meta: map[string]any{"IsDraft": "true"}},
-		&Asset{Path: "/test/file5.md"},
+		&Asset{Path: "/test/file5.txt", Meta: map[string]any{"IsDraft": "  FALSE  "}},
+		&Asset{Path: "/test/file6.txt", Meta: map[string]any{"IsDraft": "  TRUE  "}},
+		&Asset{Path: "/test/file7.md"},
 	}
 
 	filtered := assets.Filter(WithoutMeta("IsDraft"))
@@ -248,7 +255,7 @@ func TestWithoutMeta(t *testing.T) {
 	}
 
 	for _, asset := range filtered {
-		if asset.Path == "/test/file2.txt" || asset.Path == "/test/file4.txt" {
+		if asset.Path == "/test/file2.txt" || asset.Path == "/test/file4.txt" || asset.Path == "/test/file6.txt" {
 			t.Error("Filtered asset should not be a draft")
 		}
 	}
