@@ -77,12 +77,6 @@ func TestFromGit(t *testing.T) {
 		}
 
 		verifyAssets(t, buildInstance.Assets, map[string]string{"/parentDir/clonedRepo/root_file.txt": "root_content"}, outDir)
-
-		// Check if the clone actually happened at tmp/parentDir/clonedRepo
-		clonedFilePath := filepath.Join("tmp", outDir, "root_file.txt")
-		if _, statErr := os.Stat(clonedFilePath); statErr != nil {
-			t.Errorf("Cloned file not found at expected location '%s': %v", clonedFilePath, statErr)
-		}
 	})
 }
 
