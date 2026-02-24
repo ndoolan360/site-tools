@@ -250,8 +250,8 @@ func TestWithoutMeta(t *testing.T) {
 	}
 
 	filtered := assets.Filter(WithoutMeta("IsDraft"))
-	if len(filtered) != 3 {
-		t.Errorf("Expected 3 asset, got %d", len(filtered))
+	if len(filtered) != 4 {
+		t.Errorf("Expected 4 asset, got %d", len(filtered))
 	}
 
 	for _, asset := range filtered {
