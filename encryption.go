@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-//go:embed encryption_decrypt_script.js
+//go:embed assets/encryption_decrypt_script.js
 var decryptScriptTemplate []byte
 
 type StorageMode string
@@ -194,7 +194,7 @@ func generateDecryptionScript(
 ) (string, error) {
 	// Create an asset for the script template
 	scriptAsset := &Asset{
-		Path: "encryption_template.js",
+		Path: "encryption_decrypt_script.js",
 		Data: decryptScriptTemplate,
 	}
 

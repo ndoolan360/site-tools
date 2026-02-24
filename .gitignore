@@ -7,10 +7,12 @@
 !*.go
 !go.sum
 !go.mod
-!*.js
 
 !README.md
 !LICENSE
 
 # ...even if they are in subdirectories
 !*/
+
+# assets are an exception
+!assets/**
