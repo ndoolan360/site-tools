@@ -1,8 +1,11 @@
 package sitetools
 
 import (
+	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 )
 
 type Asset struct {
@@ -25,12 +28,29 @@ func (assets Assets) Transform(transformers ...Transformer) error {
 }
 
 func (assets Assets) Write(outDir string) error {
+	baseDir, err := filepath.Abs(outDir)
+	if err != nil {
+		return err
+	}
+
 	for _, asset := range assets {
-		if err := os.MkdirAll(path.Dir(outDir+asset.Path), 0755); err != nil {
+		cleaned := path.Clean("/" + strings.TrimPrefix(asset.Path, "/"))
+		rel := strings.TrimPrefix(cleaned, "/")
+
+		target := filepath.Join(baseDir, filepath.FromSlash(rel))
+		targetAbs, err := filepath.Abs(target)
+		if err != nil {
+			return err
+		}
+		if targetAbs != baseDir && !strings.HasPrefix(targetAbs, baseDir+string(os.PathSeparator)) {
+			return fmt.Errorf("asset path escapes output dir: %s", asset.Path)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(targetAbs), 0755); err != nil {
 			return err
 		}
 
-		if err := os.WriteFile(outDir+asset.Path, asset.Data, 0644); err != nil {
+		if err := os.WriteFile(targetAbs, asset.Data, 0644); err != nil {
 			return err
 		}
 	}

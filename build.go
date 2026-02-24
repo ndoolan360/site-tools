@@ -3,6 +3,7 @@ package sitetools
 import (
 	"bytes"
 	"io/fs"
+	"path"
 	"strings"
 )
 
@@ -30,14 +31,16 @@ func (build *Build) walkDir(fsys fs.FS, root string, includeRoot bool) error {
 				return err
 			}
 
+			var assetPath string
 			if includeRoot {
-				filepath = "/" + filepath
+				assetPath = "/" + filepath
 			} else {
-				filepath = strings.TrimPrefix(filepath, root)
+				assetPath = strings.TrimPrefix(filepath, root)
 			}
+			assetPath = path.Clean("/" + strings.TrimPrefix(assetPath, "/"))
 
 			build.Assets = append(build.Assets, &Asset{
-				Path: filepath,
+				Path: assetPath,
 				Meta: map[string]any{},
 				Data: bytes.TrimSpace(data),
 			})
