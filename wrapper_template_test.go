@@ -80,3 +80,23 @@ func TestWrapperTemplate_MalformedWrapper(t *testing.T) {
 		t.Fatal("Transform expected an error due to malformed wrapper template, but got nil")
 	}
 }
+
+func TestWrapperTemplate_MissingTemplate(t *testing.T) {
+	asset := &Asset{
+		Path: "/page.html",
+		Data: []byte("Page content"),
+		Meta: map[string]any{},
+	}
+
+	transformer := WrapperTemplateTransformer{
+		WrapperTemplate: WrapperTemplate{
+			Template:       nil,
+			ChildBlockName: "content",
+		},
+	}
+
+	err := transformer.Transform(asset)
+	if err == nil {
+		t.Fatal("Transform expected an error due to missing wrapper template, but got nil")
+	}
+}
