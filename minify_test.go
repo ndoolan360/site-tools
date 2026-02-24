@@ -3,7 +3,7 @@ package sitetools
 import "testing"
 
 func TestMinifyTransformer_Transform(t *testing.T) {
-	transformer := &MinifyTransformer{}
+	transformer := MinifyTransformer{}
 	testCases := []struct {
 		name      string
 		extension string

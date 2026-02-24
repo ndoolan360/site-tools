@@ -8,11 +8,6 @@ import (
 
 func TestFromDir(t *testing.T) {
 	dir := t.TempDir()
-	// create root directory
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		t.Fatalf("failed to create root directory: %v", err)
-	}
 
 	testFiles := []string{
 		"test1.txt",
@@ -29,7 +24,7 @@ func TestFromDir(t *testing.T) {
 
 	build := &Build{}
 
-	err = build.FromDir(os.DirFS(dir), ".")
+	err := build.FromDir(os.DirFS(dir), ".")
 	if err != nil {
 		t.Fatalf("Failed: %v", err)
 	}
@@ -45,14 +40,9 @@ func TestFromDir(t *testing.T) {
 
 func TestFromDir_ReadFileError(t *testing.T) {
 	dir := t.TempDir()
-	// create root directory
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
-		t.Fatalf("failed to create root directory: %v", err)
-	}
 
 	testFilePath := filepath.Join(dir, "test1.txt")
-	err = os.WriteFile(testFilePath, []byte("test content"), 0000) // no permissions
+	err := os.WriteFile(testFilePath, []byte("test content"), 0000) // no permissions
 	if err != nil {
 		t.Fatalf("failed to create test file: %v", err)
 	}
