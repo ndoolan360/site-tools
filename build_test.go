@@ -54,28 +54,3 @@ func TestFromDir_ReadFileError(t *testing.T) {
 		t.Fatal("expected error due to file read permissions, got nil")
 	}
 }
-
-func TestWalkDir_IncludeRoot(t *testing.T) {
-	dir := t.TempDir()
-
-	testFilePath := filepath.Join(dir, "test1.txt")
-	err := os.WriteFile(testFilePath, []byte("test content"), 0644)
-	if err != nil {
-		t.Fatalf("failed to create test file: %v", err)
-	}
-
-	build := &Build{}
-
-	err = build.walkDir(os.DirFS(dir), ".", true)
-	if err != nil {
-		t.Fatalf("Failed: %v", err)
-	}
-
-	if len(build.Assets) != 1 {
-		t.Fatalf("expected 1 asset, got %d", len(build.Assets))
-	}
-
-	if build.Assets[0].Path != "/test1.txt" {
-		t.Fatalf("expected path '/test1.txt', got '%s'", build.Assets[0].Path)
-	}
-}

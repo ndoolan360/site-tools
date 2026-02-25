@@ -24,6 +24,26 @@ func (m *MockTransformer) Transform(asset *Asset) error {
 	return nil
 }
 
+func TestAssets_Add(t *testing.T) {
+	assets := Assets{}
+
+	asset := newTestAsset("/test.txt", "data", nil)
+	assets.Add(*asset)
+
+	if len(assets) != 1 {
+		t.Fatalf("expected 1 asset, got %d", len(assets))
+	}
+	if assets[0].Path != "/test.txt" {
+		t.Errorf("Asset Path = %s, want /test.txt", assets[0].Path)
+	}
+	if string(assets[0].Data) != "data" {
+		t.Errorf("Asset Data = %s, want data", string(assets[0].Data))
+	}
+	if assets[0].Meta != nil {
+		t.Errorf("Asset Meta = %v, want nil", assets[0].Meta)
+	}
+}
+
 func TestAssets_Transform(t *testing.T) {
 	asset1 := newTestAsset("1.txt", "content", nil)
 	asset2 := newTestAsset("2.txt", "content", nil)
