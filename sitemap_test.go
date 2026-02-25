@@ -124,8 +124,9 @@ func TestAddRobotsTxt(t *testing.T) {
 	}
 
 	err := build.AddRobotsTxt(
-		"Allow: /",
-		"Sitemap: https://example.com/sitemap.xml",
+		"https://example.com/sitemap.xml",
+		"/private",
+		"/temp",
 	)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -135,11 +136,7 @@ func TestAddRobotsTxt(t *testing.T) {
 		t.Fatal("Expected robots.txt asset, got nil")
 	}
 
-	expectedData := `User-agent: *
-Disallow: /
-Allow: /
-Sitemap: https://example.com/sitemap.xml
-`
+	expectedData := "User-agent: *\nDisallow: /private\nDisallow: /temp\nSitemap: https://example.com/sitemap.xml\n"
 
 	if string(robots.Data) != expectedData {
 		t.Errorf("Robots.txt data does not match expected.\nGot:\n%s\nExpected:\n%s", string(robots.Data), expectedData)
@@ -155,10 +152,56 @@ Sitemap: https://example.com/sitemap.xml
 	}
 }
 
+func TestAddRobotsTxt_Default(t *testing.T) {
+	build := &Build{
+		Assets: Assets{
+			&Asset{Path: "/index.html"},
+		},
+	}
+
+	err := build.AddRobotsTxt("")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	robots := build.Assets.Filter(WithPath("/robots.txt"))[0]
+	if robots == nil {
+		t.Fatal("Expected robots.txt asset, got nil")
+	}
+
+	expectedData := "User-agent: *\nDisallow: \n"
+
+	if string(robots.Data) != expectedData {
+		t.Errorf("Robots.txt data does not match expected.\nGot:\n%s\nExpected:\n%s", string(robots.Data), expectedData)
+	}
+}
+
+func TestAddRobotsTxt_GuardCallerDefiningPrefix(t *testing.T) {
+	build := &Build{
+		Assets: Assets{
+			&Asset{Path: "/index.html"},
+		},
+	}
+
+	err := build.AddRobotsTxt("", "Disallow: /private", "Disallow: /temp")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	robots := build.Assets.Filter(WithPath("/robots.txt"))[0]
+	if robots == nil {
+		t.Fatal("Expected robots.txt asset, got nil")
+	}
+
+	expectedData := "User-agent: *\nDisallow: /private\nDisallow: /temp\n"
+
+	if string(robots.Data) != expectedData {
+		t.Errorf("Robots.txt data does not match expected.\nGot:\n%s\nExpected:\n%s", string(robots.Data), expectedData)
+	}
+}
+
 func TestAddRobotsTxt_EmptyBuild(t *testing.T) {
 	build := &Build{Assets: Assets{}}
 
-	err := build.AddRobotsTxt("Disallow: /private")
+	err := build.AddRobotsTxt("", "/private")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

@@ -89,14 +89,25 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 	return nil
 }
 
-func (build *Build) AddRobotsTxt(additionalLines ...string) error {
+// AddRobotsTxt adds a robots.txt file to the build with the specified additional lines. If no additional lines are provided, it defaults to allowing all user agents.
+func (build *Build) AddRobotsTxt(sitemap string, disallowLines ...string) error {
 	if len(build.Assets) == 0 {
 		return nil
 	}
 
-	data := []byte("User-agent: *\nDisallow: /\n")
-	for _, line := range additionalLines {
-		data = append(data, []byte(line+"\n")...)
+	data := []byte("User-agent: *\n")
+	if len(disallowLines) == 0 {
+		data = append(data, []byte("Disallow: \n")...)
+	} else {
+		for _, rawLine := range disallowLines {
+			line := bytes.TrimPrefix([]byte(rawLine), []byte("Disallow:"))
+			line = bytes.TrimSpace(line)
+			data = append(data, []byte("Disallow: "+string(line)+"\n")...)
+		}
+	}
+
+	if sitemap != "" {
+		data = append(data, []byte("Sitemap: "+sitemap+"\n")...)
 	}
 
 	robots := &Asset{
