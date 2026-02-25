@@ -16,6 +16,14 @@ type Asset struct {
 
 type Assets []*Asset
 
+func (assets *Assets) Add(newAssets ...Asset) {
+	for i := range newAssets {
+		cleaned := path.Clean("/" + strings.TrimPrefix(newAssets[i].Path, "/"))
+		newAssets[i].Path = cleaned
+		*assets = append(*assets, &newAssets[i])
+	}
+}
+
 func (assets Assets) Transform(transformers ...Transformer) error {
 	for _, transformer := range transformers {
 		for _, asset := range assets {

@@ -12,10 +12,10 @@ type Build struct {
 }
 
 func (build *Build) FromDir(fsys fs.FS, root string) error {
-	return build.walkDir(fsys, root, false)
+	return build.walkDir(fsys, root)
 }
 
-func (build *Build) walkDir(fsys fs.FS, root string, includeRoot bool) error {
+func (build *Build) walkDir(fsys fs.FS, root string) error {
 	return fs.WalkDir(fsys, root,
 		func(filepath string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -31,12 +31,7 @@ func (build *Build) walkDir(fsys fs.FS, root string, includeRoot bool) error {
 				return err
 			}
 
-			var assetPath string
-			if includeRoot {
-				assetPath = "/" + filepath
-			} else {
-				assetPath = strings.TrimPrefix(filepath, root)
-			}
+			assetPath := strings.TrimPrefix(filepath, root)
 			assetPath = path.Clean("/" + strings.TrimPrefix(assetPath, "/"))
 
 			build.Assets = append(build.Assets, &Asset{
