@@ -8,48 +8,48 @@ import (
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
-func TestMarkdownTransformer_Transform(t *testing.T) {
+func TestMarkdownTransformer_TransformMarkdown(t *testing.T) {
 	transformer := MarkdownTransformer{}
 
-	t.Run("transforms .md to .html", func(t *testing.T) {
-		asset := &Asset{
-			Path: "test.md",
-			Data: []byte("# Hello"),
-		}
-		err := transformer.Transform(asset)
-		if err != nil {
-			t.Fatalf("Transform() error = %v", err)
-		}
-		if asset.Path != "test.html" {
-			t.Errorf("Expected path to be 'test.html', got '%s'", asset.Path)
-		}
+	asset := &Asset{
+		Path: "test.md",
+		Data: []byte("# Hello"),
+	}
+	err := transformer.Transform(asset)
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	if asset.Path != "test.html" {
+		t.Errorf("Expected path to be 'test.html', got '%s'", asset.Path)
+	}
 
-		expectedHTML := "<h1>Hello</h1>\n"
-		if string(asset.Data) != expectedHTML {
-			t.Errorf("Expected HTML to be %q, got %q", expectedHTML, string(asset.Data))
-		}
-	})
+	expectedHTML := "<h1>Hello</h1>\n"
+	if string(asset.Data) != expectedHTML {
+		t.Errorf("Expected HTML to be %q, got %q", expectedHTML, string(asset.Data))
+	}
+}
 
-	t.Run("ignores non-.md files", func(t *testing.T) {
-		asset := &Asset{
-			Path: "test.txt",
-			Data: []byte("Just some text."),
-		}
-		originalData := make([]byte, len(asset.Data))
-		copy(originalData, asset.Data)
-		originalPath := asset.Path
+func TestMarkdownTransformer_IgnoresNonMarkdown(t *testing.T) {
+	transformer := MarkdownTransformer{}
 
-		err := transformer.Transform(asset)
-		if err != nil {
-			t.Fatalf("Transform() error = %v", err)
-		}
-		if asset.Path != originalPath {
-			t.Errorf("Expected path to be '%s', got '%s'", originalPath, asset.Path)
-		}
-		if !bytes.Equal(asset.Data, originalData) {
-			t.Errorf("Expected data to be unchanged, got '%s'", string(asset.Data))
-		}
-	})
+	asset := &Asset{
+		Path: "test.txt",
+		Data: []byte("Just some text."),
+	}
+	originalData := make([]byte, len(asset.Data))
+	copy(originalData, asset.Data)
+	originalPath := asset.Path
+
+	err := transformer.Transform(asset)
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	if asset.Path != originalPath {
+		t.Errorf("Expected path to be '%s', got '%s'", originalPath, asset.Path)
+	}
+	if !bytes.Equal(asset.Data, originalData) {
+		t.Errorf("Expected data to be unchanged, got '%s'", string(asset.Data))
+	}
 }
 
 type MockCodeBlockContext struct {

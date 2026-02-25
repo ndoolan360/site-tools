@@ -14,6 +14,9 @@ type TemplateTransformer struct {
 }
 
 func (t TemplateTransformer) Transform(asset *Asset) error {
+	if asset.Meta == nil {
+		asset.Meta = map[string]any{}
+	}
 	if asset.Meta["Global"] != nil {
 		return fmt.Errorf("asset meta cannot contain reserved key 'Global'")
 	}

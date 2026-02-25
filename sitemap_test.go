@@ -1,6 +1,9 @@
 package sitetools
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestAddSitemap(t *testing.T) {
 	build := &Build{
@@ -60,6 +63,43 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 	expectedData := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://test.com/index.html</loc><priority>1.0</priority></url><url><loc>https://test.com/important.html</loc><priority>0.8</priority></url><url><loc>https://test.com/about.html</loc><lastmod>2025-08-02</lastmod></url><url><loc>https://test.com/contact.html</loc></url><url><loc>https://test.com/styles.css</loc><changefreq>never</changefreq></url></urlset>`
 	if string(sitemap.Data) != expectedData {
 		t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", string(sitemap.Data), expectedData)
+	}
+}
+
+func TestAddSitemap_EscapingAndPriorityTypes(t *testing.T) {
+	build := &Build{
+		Assets: Assets{
+			&Asset{Path: "/search?q=a&b", Meta: map[string]any{"SitemapPriority": float32(0.5)}},
+			&Asset{Path: "/int.html", Meta: map[string]any{"SitemapPriority": 2}},
+			&Asset{Path: "/int32.html", Meta: map[string]any{"SitemapPriority": int32(3)}},
+			&Asset{Path: "/int64.html", Meta: map[string]any{"SitemapPriority": int64(4)}},
+		},
+	}
+
+	err := build.AddSitemap("https://test.com")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	sitemap := build.Assets.Filter(WithPath("/sitemap.xml"))[0]
+	if sitemap == nil {
+		t.Fatal("Expected sitemap asset, got nil")
+	}
+
+	data := string(sitemap.Data)
+	if !strings.Contains(data, "https://test.com/search?q=a&amp;b") {
+		t.Errorf("Expected escaped URL in sitemap, got:\n%s", data)
+	}
+
+	expectedPriorities := []string{
+		"<priority>0.5</priority>",
+		"<priority>2.0</priority>",
+		"<priority>3.0</priority>",
+		"<priority>4.0</priority>",
+	}
+	for _, expected := range expectedPriorities {
+		if !strings.Contains(data, expected) {
+			t.Errorf("Expected sitemap to contain %s, got:\n%s", expected, data)
+		}
 	}
 }
 

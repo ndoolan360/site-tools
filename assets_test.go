@@ -87,18 +87,14 @@ func TestAssets_Transform(t *testing.T) {
 }
 
 func TestAssets_Write(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "assets_test_write")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 
 	asset1 := newTestAsset("/file1.txt", "content1", nil)
 	asset2 := newTestAsset("/subdir/file2.txt", "content2", nil)
 
 	assets := Assets{asset1, asset2}
 
-	err = assets.Write(tmpDir)
+	err := assets.Write(tmpDir)
 	if err != nil {
 		t.Fatalf("Write() returned error: %v", err)
 	}

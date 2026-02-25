@@ -23,7 +23,7 @@ func TestAddAutoReload_Transform(t *testing.T) {
 				WebSocketPath: "/ws",
 				Timeout:       1000,
 			},
-			expectedData: []byte("<html><body><script>new WebSocket(\"ws://\"+location.host+\"/ws\").onclose=()=>setTimeout(()=>location.reload(!0),1000)</script></body></html>"),
+			expectedData: []byte("<html><body><script>const socket = new WebSocket(\"ws://\" + location.host + \"/ws\")\nsocket.onclose = () => setTimeout(() => location.reload(true),1000)</script></body></html>"),
 			expectError:  false,
 		},
 		{

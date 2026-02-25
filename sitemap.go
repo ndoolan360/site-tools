@@ -1,6 +1,16 @@
 package sitetools
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/xml"
+	"fmt"
+)
+
+func xmlEscape(value string) string {
+	var buf bytes.Buffer
+	_ = xml.EscapeText(&buf, []byte(value))
+	return buf.String()
+}
 
 func (build *Build) AddSitemap(url string, filters ...Filter) error {
 	if len(build.Assets) == 0 {
@@ -15,13 +25,13 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 
 	for _, asset := range build.Assets.Filter(filters...) {
 		data = append(data, []byte("<url>")...)
-		data = append(data, []byte("<loc>"+url+asset.Path+"</loc>")...)
+		data = append(data, []byte("<loc>"+xmlEscape(url+asset.Path)+"</loc>")...)
 
 		acceptableModifiedKeys := []string{"SitemapLastModified", "LastModified"}
 		for _, key := range acceptableModifiedKeys {
 			if modified, ok := asset.Meta[key]; ok {
 				if modifiedStr, ok := modified.(string); ok {
-					data = append(data, []byte("<lastmod>"+modifiedStr+"</lastmod>")...)
+					data = append(data, []byte("<lastmod>"+xmlEscape(modifiedStr)+"</lastmod>")...)
 					break
 				}
 			}
@@ -30,12 +40,24 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 		acceptablePriorityKeys := []string{"SitemapPriority", "Priority"}
 		for _, key := range acceptablePriorityKeys {
 			if priority, ok := asset.Meta[key]; ok {
-				switch priority.(type) {
-				case float32, float64, int, int32, int64:
-					data = append(data, []byte("<priority>"+fmt.Sprintf("%.1f", priority)+"</priority>")...)
+				switch p := priority.(type) {
+				case float32:
+					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
+					break
+				case int:
+					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
+					break
+				case int32:
+					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
+					break
+				case int64:
+					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
+					break
+				case float64:
+					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", p))+"</priority>")...)
 					break
 				case string:
-					data = append(data, []byte("<priority>"+priority.(string)+"</priority>")...)
+					data = append(data, []byte("<priority>"+xmlEscape(p)+"</priority>")...)
 					break
 				}
 			}
@@ -45,7 +67,7 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 		for _, key := range acceptableChangeFreqKeys {
 			if changeFreq, ok := asset.Meta[key]; ok {
 				if changeFreqStr, ok := changeFreq.(string); ok {
-					data = append(data, []byte("<changefreq>"+changeFreqStr+"</changefreq>")...)
+					data = append(data, []byte("<changefreq>"+xmlEscape(changeFreqStr)+"</changefreq>")...)
 					break
 				}
 			}

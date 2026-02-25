@@ -8,96 +8,109 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-func TestFromGit(t *testing.T) {
-	if err := os.MkdirAll("tmp", 0755); err != nil {
-		t.Fatalf("Failed to create tmp directory: %v", err)
+func TestFromGit_SuccessfulClone(t *testing.T) {
+	files := map[string]string{
+		"file1.txt":        "content1",
+		"subdir/file2.txt": "content2",
 	}
-	defer os.RemoveAll("tmp")
+	repoPath, cleanupRepo := setupGitRepo(t, files, "master")
+	defer cleanupRepo()
 
-	t.Run("successful clone of main branch", func(t *testing.T) {
-		files := map[string]string{
-			"file1.txt":        "content1",
-			"subdir/file2.txt": "content2",
-		}
-		repoPath, cleanupRepo := setupGitRepo(t, files, "master")
-		defer cleanupRepo()
+	buildInstance := &Build{}
+	outDir := "test-clone-main"
 
-		buildInstance := &Build{}
-		outDir := "test-clone-main"
-		cloneDestPath := filepath.Join("tmp", outDir)
-		defer os.RemoveAll(cloneDestPath)
+	err := buildInstance.FromGit(repoPath, "master", outDir)
+	if err != nil {
+		t.Fatalf("FromGit failed: %v", err)
+	}
 
-		err := buildInstance.FromGit(repoPath, "master", outDir)
-		if err != nil {
-			t.Fatalf("FromGit failed: %v", err)
-		}
+	expectedAssets := map[string]string{
+		"/test-clone-main/file1.txt":        "content1",
+		"/test-clone-main/subdir/file2.txt": "content2",
+	}
 
-		expectedAssets := map[string]string{
-			"/test-clone-main/file1.txt":        "content1",
-			"/test-clone-main/subdir/file2.txt": "content2",
-		}
+	verifyAssets(t, buildInstance.Assets, expectedAssets, outDir)
+}
 
-		verifyAssets(t, buildInstance.Assets, expectedAssets, outDir)
-	})
+func TestFromGit_InvalidRepositoryURL(t *testing.T) {
+	buildInstance := &Build{}
+	outDir := "test-clone-invalid-url"
 
-	t.Run("clone invalid repository URL", func(t *testing.T) {
-		buildInstance := &Build{}
-		outDir := "test-clone-invalid-url"
-		cloneDestPath := filepath.Join("tmp", outDir)
-		defer os.RemoveAll(cloneDestPath)
+	err := buildInstance.FromGit("://invalid-url-format", "master", outDir)
+	if err == nil {
+		t.Fatalf("Expected FromGit to fail for invalid URL, but it succeeded")
+	}
+	expectedErrorSubString := "could not clone repository"
+	if !strings.Contains(err.Error(), expectedErrorSubString) {
+		t.Errorf("Expected error to contain '%s', got: %v", expectedErrorSubString, err)
+	}
+}
 
-		err := buildInstance.FromGit("://invalid-url-format", "master", outDir)
-		if err == nil {
-			t.Fatalf("Expected FromGit to fail for invalid URL, but it succeeded")
-		}
-		expectedErrorSubString := "could not clone repository"
-		if !strings.Contains(err.Error(), expectedErrorSubString) {
-			t.Errorf("Expected error to contain '%s', got: %v", expectedErrorSubString, err)
-		}
-	})
+func TestFromGit_OutDirWithSubdirectories(t *testing.T) {
+	files := map[string]string{"root_file.txt": "root_content"}
+	repoPath, cleanupRepo := setupGitRepo(t, files, "master")
+	defer cleanupRepo()
 
-	t.Run("outDir with subdirectories", func(t *testing.T) {
-		files := map[string]string{"root_file.txt": "root_content"}
-		repoPath, cleanupRepo := setupGitRepo(t, files, "master")
-		defer cleanupRepo()
+	buildInstance := &Build{}
+	outDir := "parentDir/clonedRepo"
 
-		buildInstance := &Build{}
-		outDir := "parentDir/clonedRepo"
-		cloneDestParentPath := filepath.Join("tmp", "parentDir")
-		defer os.RemoveAll(cloneDestParentPath)
+	err := buildInstance.FromGit(repoPath, "master", outDir)
+	if err != nil {
+		t.Fatalf("FromGit failed with subpath outDir: %v", err)
+	}
 
-		err := buildInstance.FromGit(repoPath, "master", outDir)
-		if err != nil {
-			t.Fatalf("FromGit failed with subpath outDir: %v", err)
-		}
+	verifyAssets(t, buildInstance.Assets, map[string]string{"/parentDir/clonedRepo/root_file.txt": "root_content"}, outDir)
+}
 
-		verifyAssets(t, buildInstance.Assets, map[string]string{"/parentDir/clonedRepo/root_file.txt": "root_content"}, outDir)
+func TestWalkBilly_ReadDirError(t *testing.T) {
+	fsys := memfs.New()
 
-		// Check if the clone actually happened at tmp/parentDir/clonedRepo
-		clonedFilePath := filepath.Join("tmp", outDir, "root_file.txt")
-		if _, statErr := os.Stat(clonedFilePath); statErr != nil {
-			t.Errorf("Cloned file not found at expected location '%s': %v", clonedFilePath, statErr)
-		}
-	})
+	buildInstance := &Build{}
+	err := buildInstance.walkBilly(fsys, "missing", "prefix")
+	if err == nil {
+		t.Fatal("Expected error when root is missing, but got nil")
+	}
+}
+
+func TestWalkBilly_PrefixAndRoot(t *testing.T) {
+	fsys := memfs.New()
+	if err := fsys.MkdirAll("subdir", 0755); err != nil {
+		t.Fatalf("Failed to create subdir: %v", err)
+	}
+	if err := util.WriteFile(fsys, "subdir/file.txt", []byte("content"), 0644); err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	buildInstance := &Build{}
+	err := buildInstance.walkBilly(fsys, "subdir", "prefix")
+	if err != nil {
+		t.Fatalf("walkBilly failed: %v", err)
+	}
+
+	if len(buildInstance.Assets) != 1 {
+		t.Fatalf("expected 1 asset, got %d", len(buildInstance.Assets))
+	}
+	if buildInstance.Assets[0].Path != "/prefix/subdir/file.txt" {
+		t.Fatalf("expected asset path '/prefix/subdir/file.txt', got '%s'", buildInstance.Assets[0].Path)
+	}
+	if string(buildInstance.Assets[0].Data) != "content" {
+		t.Fatalf("expected asset data 'content', got '%s'", string(buildInstance.Assets[0].Data))
+	}
 }
 
 func setupGitRepo(t *testing.T, files map[string]string, initialBranchName string) (repoPath string, cleanupFunc func()) {
 	t.Helper()
 
 	var err error
-	repoPath, err = os.MkdirTemp("", "test-git-repo-")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir for git repo: %v", err)
-	}
-
-	cleanupFunc = func() {
-		os.RemoveAll(repoPath)
-	}
+	repoPath = t.TempDir()
+	cleanupFunc = func() {}
 
 	r, err := git.PlainInit(repoPath, false) // false for not bare
 	if err != nil {

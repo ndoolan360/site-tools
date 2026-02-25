@@ -3,7 +3,7 @@ package sitetools
 import "testing"
 
 func TestMinifyTransformer_Transform(t *testing.T) {
-	transformer := &MinifyTransformer{}
+	transformer := MinifyTransformer{}
 	testCases := []struct {
 		name      string
 		extension string
@@ -55,5 +55,22 @@ func TestMinifyTransformer_Transform(t *testing.T) {
 				t.Errorf("Transform() = %v, want %v", string(asset.Data), tc.expected)
 			}
 		})
+	}
+}
+
+func TestMinifyTransformer_Transform_UnknownExtension(t *testing.T) {
+	transformer := MinifyTransformer{}
+	asset := &Asset{
+		Path: "/test.unknownext",
+		Data: []byte("Some content that should remain unchanged."),
+	}
+
+	err := transformer.Transform(asset)
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	expected := "Some content that should remain unchanged."
+	if string(asset.Data) != expected {
+		t.Errorf("Transform() = %v, want %v", string(asset.Data), expected)
 	}
 }

@@ -30,6 +30,28 @@ func TestTemplate_WithComponents(t *testing.T) {
 	}
 }
 
+func TestTemplate_WithNilMeta(t *testing.T) {
+	asset := &Asset{
+		Path: "/page.html",
+		Data: []byte(`{{ .Global.SiteName }} - {{ .PageContent }}`),
+		Meta: nil,
+	}
+
+	transformer := TemplateTransformer{
+		Global: map[string]any{"SiteName": "MySite"},
+	}
+
+	err := transformer.Transform(asset)
+	if err != nil {
+		t.Fatalf("Transform returned an unexpected error: %v", err)
+	}
+
+	expectedData := "MySite - <no value>"
+	if string(asset.Data) != expectedData {
+		t.Errorf("Transform with nil meta did not produce the expected output.\nExpected:\n%s\nGot:\n%s", expectedData, string(asset.Data))
+	}
+}
+
 func TestTemplate_WithMalformedComponent(t *testing.T) {
 	asset := &Asset{
 		Path: "/page.html",
