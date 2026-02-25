@@ -43,22 +43,16 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 				switch p := priority.(type) {
 				case float32:
 					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
-					break
 				case int:
 					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
-					break
 				case int32:
 					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
-					break
 				case int64:
 					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", float64(p)))+"</priority>")...)
-					break
 				case float64:
 					data = append(data, []byte("<priority>"+xmlEscape(fmt.Sprintf("%.1f", p))+"</priority>")...)
-					break
 				case string:
 					data = append(data, []byte("<priority>"+xmlEscape(p)+"</priority>")...)
-					break
 				}
 			}
 		}
