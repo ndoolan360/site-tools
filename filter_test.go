@@ -260,3 +260,69 @@ func TestWithoutMeta(t *testing.T) {
 		}
 	}
 }
+
+func TestWithMimeType(t *testing.T) {
+	assets := Assets{
+		&Asset{Path: "/test/file1.txt"},
+		&Asset{Path: "/test/file2.md"},
+		&Asset{Path: "/test/file3.html"},
+	}
+
+	filtered := assets.Filter(WithMimeType("text/plain"))
+	if len(filtered) != 1 {
+		t.Errorf("Expected 1 asset, got %d", len(filtered))
+	}
+
+	if filtered[0].Path != "/test/file1.txt" {
+		t.Errorf("Expected /test/file1.txt, got %s", filtered[0].Path)
+	}
+}
+
+func TestWithMimeType_TopLevel(t *testing.T) {
+	assets := Assets{
+		&Asset{Path: "/test/file1.txt"},
+		&Asset{Path: "/test/file2.md"},
+		&Asset{Path: "/test/file3.png"},
+	}
+
+	filtered := assets.Filter(WithMimeType("text/*"))
+	if len(filtered) != 2 {
+		t.Errorf("Expected 2 assets, got %d", len(filtered))
+	}
+}
+
+func TestWithoutMimeType(t *testing.T) {
+	assets := Assets{
+		&Asset{Path: "/test/file1.txt"},
+		&Asset{Path: "/test/file2.md"},
+		&Asset{Path: "/test/file3.html"},
+	}
+
+	filtered := assets.Filter(WithoutMimeType("text/plain"))
+	if len(filtered) != 2 {
+		t.Errorf("Expected 2 assets, got %d", len(filtered))
+	}
+
+	for _, asset := range filtered {
+		if asset.Path == "/test/file1.txt" {
+			t.Error("Filtered asset should not be /test/file1.txt")
+		}
+	}
+}
+
+func TestWithoutMimeType_TopLevel(t *testing.T) {
+	assets := Assets{
+		&Asset{Path: "/test/file1.txt"},
+		&Asset{Path: "/test/file2.md"},
+		&Asset{Path: "/test/file3.png"},
+	}
+
+	filtered := assets.Filter(WithoutMimeType("text/*"))
+	if len(filtered) != 1 {
+		t.Errorf("Expected 1 asset, got %d", len(filtered))
+	}
+
+	if filtered[0].Path != "/test/file3.png" {
+		t.Errorf("Expected /test/file3.png, got %s", filtered[0].Path)
+	}
+}

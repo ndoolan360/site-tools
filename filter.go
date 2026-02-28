@@ -1,7 +1,9 @@
 package sitetools
 
 import (
+	"mime"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -54,6 +56,12 @@ func WithParentDir(parent string) Filter {
 	}
 }
 
+func WithoutParentDir(parent string) Filter {
+	return func(asset Asset) bool {
+		return !WithParentDir(parent)(asset)
+	}
+}
+
 func WithPath(filepath string) Filter {
 	return func(asset Asset) bool {
 		return path.Clean(filepath) == path.Clean(asset.Path)
@@ -62,29 +70,20 @@ func WithPath(filepath string) Filter {
 
 func WithoutPath(filepath string) Filter {
 	return func(asset Asset) bool {
-		return path.Clean(filepath) != path.Clean(asset.Path)
+		return !WithPath(filepath)(asset)
 	}
 }
 
 func WithExtensions(exts ...string) Filter {
 	return func(asset Asset) bool {
-		for _, ext := range exts {
-			if path.Ext(asset.Path) == ext {
-				return true
-			}
-		}
-		return false
+		ext := path.Ext(asset.Path)
+		return slices.Contains(exts, ext)
 	}
 }
 
 func WithoutExtensions(exts ...string) Filter {
 	return func(asset Asset) bool {
-		for _, ext := range exts {
-			if path.Ext(asset.Path) == ext {
-				return false
-			}
-		}
-		return true
+		return !WithExtensions(exts...)(asset)
 	}
 }
 
@@ -112,22 +111,43 @@ func WithMeta(key string) Filter {
 
 func WithoutMeta(key string) Filter {
 	return func(asset Asset) bool {
-		val, ok := asset.Meta[key]
-		if ok {
-			switch v := val.(type) {
-			case bool:
-				return v == false
-			case string:
-				normalized := strings.ToLower(strings.TrimSpace(v))
-				if normalized == "true" {
-					return false
-				}
-				if normalized == "false" {
+		return !WithMeta(key)(asset)
+	}
+}
+
+// WithMimeType returns a filter that matches assets with the given MIME types.
+// The MIME types can be specified as full MIME types (e.g. "text/css") or top-level
+// types with a wildcard (e.g. "image/*").
+func WithMimeType(mimeTypes ...string) Filter {
+	mime.AddExtensionType(".md", "text/markdown")
+	mime.AddExtensionType(".yaml", "application/yaml")
+	mime.AddExtensionType(".yml", "application/yaml")
+
+	return func(asset Asset) bool {
+		ext := path.Ext(asset.Path)
+		assetMimeType := mime.TypeByExtension(ext)
+
+		// remove charset if present
+		if idx := strings.Index(assetMimeType, ";"); idx != -1 {
+			assetMimeType = strings.TrimSpace(assetMimeType[:idx])
+		}
+
+		for _, mimeType := range mimeTypes {
+			if ext != "" {
+				fullMatch := mimeType == assetMimeType
+				topLevelMatch := strings.HasSuffix(mimeType, "/*") &&
+					strings.HasPrefix(assetMimeType, strings.TrimSuffix(mimeType, "*"))
+				if fullMatch || topLevelMatch {
 					return true
 				}
 			}
-			return val == false
 		}
-		return true
+		return false
+	}
+}
+
+func WithoutMimeType(mimeTypes ...string) Filter {
+	return func(asset Asset) bool {
+		return !WithMimeType(mimeTypes...)(asset)
 	}
 }
