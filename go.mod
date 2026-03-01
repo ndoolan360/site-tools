@@ -1,4 +1,4 @@
-module github.com/ndoolan360/site-tools
+module go.doolan.dev/site-tools
 
 go 1.23.4
 
