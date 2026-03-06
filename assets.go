@@ -76,21 +76,32 @@ func (assets Assets) ToMap(keyFromMeta string) map[string]*Asset {
 	return m
 }
 
-func (assets Assets) SetMetaFunc(metaKey string, fn func(Asset) string) Assets {
+func (assets Assets) SetMetaFunc(metaKey string, fn func(Asset) any) Assets {
 	for _, asset := range assets {
 		// If the meta is nil, skip
 		if asset.Meta == nil {
 			continue
 		}
 
-		asset.Meta[metaKey] = fn(*asset)
+		value := fn(*asset)
+
+		switch value.(type) {
+		case string, int, float64, bool:
+			// valid types
+		case []string, []int, []float64, []bool:
+			// valid slice types
+		default:
+			continue // skip if not a valid type
+		}
+
+		asset.Meta[metaKey] = value
 	}
 
 	return assets
 }
 
-func (assets Assets) AddToMeta(metaKey string, value string) Assets {
-	return assets.SetMetaFunc(metaKey, func(asset Asset) string {
+func (assets Assets) AddToMeta(metaKey string, value any) Assets {
+	return assets.SetMetaFunc(metaKey, func(asset Asset) any {
 		return value
 	})
 }

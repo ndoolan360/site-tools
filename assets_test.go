@@ -196,7 +196,7 @@ func TestAssets_SetMetaFunc(t *testing.T) {
 
 	assets := Assets{asset1, asset2, asset3}
 
-	pathPrefixFunc := func(a Asset) string {
+	pathPrefixFunc := func(a Asset) any {
 		return filepath.Dir(a.Path)
 	}
 
