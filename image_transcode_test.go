@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	genavif "github.com/gen2brain/avif"
 	genwebp "github.com/gen2brain/webp"
 )
 
@@ -90,11 +91,11 @@ var allTestImages = []testImage{
 	{"webpAnimRGB", webpAnimRGB, ".webp", ImageFormatWEBP, false, true},
 	{"webpAnimRGBA", webpAnimRGBA, ".webp", ImageFormatWEBP, true, true},
 
-	// --- AVIF --- (not yet supported)
-	// {"avifRGB", avifRGB, ".avif", ImageFormatAVIF, false, false},
-	// {"avifRGBA", avifRGBA, ".avif", ImageFormatAVIF, true, false},
-	// {"avifAnimRGB", avifAnimRGB, ".avif", ImageFormatAVIF, false, true},
-	// {"avifAnimRGBA", avifAnimRGBA, ".avif", ImageFormatAVIF, true, true},
+	// --- AVIF ---
+	{"avifRGB", avifRGB, ".avif", ImageFormatAVIF, false, false},
+	{"avifRGBA", avifRGBA, ".avif", ImageFormatAVIF, true, false},
+	{"avifAnimRGB", avifAnimRGB, ".avif", ImageFormatAVIF, false, true},
+	{"avifAnimRGBA", avifAnimRGBA, ".avif", ImageFormatAVIF, true, true},
 }
 
 func staticImages() []testImage {
@@ -140,6 +141,14 @@ func decodeAny(t *testing.T, data []byte) []image.Image {
 			frames[i] = f
 		}
 		return frames
+	}
+
+	if isAVIF(data) {
+		a, err := genavif.DecodeAll(bytes.NewReader(data))
+		if err != nil {
+			t.Fatalf("failed to decode AVIF: %v", err)
+		}
+		return a.Image
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(data))
@@ -188,6 +197,14 @@ func isWebP(data []byte) bool {
 	return len(data) >= 12 && string(data[:4]) == "RIFF" && string(data[8:12]) == "WEBP"
 }
 
+func isAVIF(data []byte) bool {
+	if len(data) < 12 {
+		return false
+	}
+	brand := string(data[8:12])
+	return string(data[4:8]) == "ftyp" && (brand == "avif" || brand == "avis")
+}
+
 // ---------- Static → All Formats ----------
 
 func TestTranscode_StaticToAllFormats(t *testing.T) {
@@ -199,6 +216,7 @@ func TestTranscode_StaticToAllFormats(t *testing.T) {
 		{ImageFormatJPEG, ".jpg"},
 		{ImageFormatGIF, ".gif"},
 		{ImageFormatWEBP, ".webp"},
+		{ImageFormatAVIF, ".avif"},
 	}
 
 	for _, src := range staticImages() {
@@ -301,7 +319,7 @@ func TestTranscode_AnimatedToStatic_FirstFrame(t *testing.T) {
 // ---------- Animated → Static (PreserveAnimated = error) ----------
 
 func TestTranscode_AnimatedToStatic_PreserveError(t *testing.T) {
-	targets := []string{ImageFormatPNG, ImageFormatJPEG}
+	targets := []string{ImageFormatPNG, ImageFormatJPEG, ImageFormatAVIF}
 
 	for _, src := range animatedImages() {
 		for _, tgt := range targets {
@@ -329,8 +347,16 @@ func TestTranscode_AnimatedToStatic_PreserveError(t *testing.T) {
 
 // ---------- Identity Transcode ----------
 
+var oneWayAnimatedFormats = map[string]bool{
+	ImageFormatAVIF: true, // AVIF doesn't support encoding animations yet
+}
+
 func TestTranscode_IdentityRoundTrip(t *testing.T) {
 	for _, src := range allTestImages {
+		if oneWayAnimatedFormats[src.format] && src.animated {
+			continue
+		}
+
 		name := fmt.Sprintf("%s_to_same", src.name)
 		t.Run(name, func(t *testing.T) {
 			asset := &Asset{

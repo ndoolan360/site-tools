@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/HugoSmits86/nativewebp"
+	genavif "github.com/gen2brain/avif"
 	genwebp "github.com/gen2brain/webp"
 )
 
@@ -191,7 +192,7 @@ func (it ImageTranscoder) newFormat() (imageEncoder, error) {
 	case ImageFormatWEBP:
 		return webpFormat{quality}, nil
 	case ImageFormatAVIF:
-		return avifFormat{}, nil
+		return avifFormat{quality}, nil
 	default:
 		return nil, fmt.Errorf("unsupported 'ToFormat': %s", it.ToFormat)
 	}
@@ -423,7 +424,10 @@ func gifDisposalToWebP(d byte) uint {
 
 // ---------- AVIF ----------
 
-type avifFormat struct{}
+type avifFormat struct {
+	// quality controls encoding quality [0-100]. 0 uses the library default (60).
+	quality int
+}
 
 func (avifFormat) identify(data []byte) bool {
 	if len(data) < 12 {
@@ -437,22 +441,47 @@ func (avifFormat) identify(data []byte) bool {
 	return majorBrand == "avif" || majorBrand == "avis"
 }
 
-func (avifFormat) decode(_ *bytes.Reader) (imageFrames, error) {
-	return imageFrames{}, fmt.Errorf("AVIF decoding not implemented yet")
-}
-
-func (avifFormat) encode(_ *bytes.Buffer, frames imageFrames) error {
-	if frames.isAnimated() {
-		return fmt.Errorf("AVIF encoding not implemented yet: animated AVIF not supported")
+func (avifFormat) decode(r *bytes.Reader) (imageFrames, error) {
+	a, err := genavif.DecodeAll(r)
+	if err != nil {
+		return imageFrames{}, err
 	}
 
-	return fmt.Errorf("AVIF encoding not implemented yet")
+	delay := make([]int, len(a.Image))
+	disposal := make([]byte, len(a.Image))
+	for i := range a.Image {
+		// gen2brain/avif delays are in seconds (float64). Convert to milliseconds.
+		delay[i] = int(a.Delay[i] * 1000)
+		// gen2brain/avif does not expose disposal info
+		disposal[i] = disposalNone
+	}
+
+	return imageFrames{
+		frames:    a.Image,
+		delay:     delay,
+		loopCount: 0, // gen2brain/avif DecodeAll does not expose loop count
+		disposal:  disposal,
+	}, nil
+}
+
+func (e avifFormat) encode(w *bytes.Buffer, frames imageFrames) error {
+	quality := e.quality
+	if quality <= 0 {
+		quality = genavif.DefaultQuality
+	}
+
+	return genavif.Encode(w, frames.frames[0], genavif.Options{
+		Quality: quality,
+		Speed:   genavif.DefaultSpeed,
+	})
 }
 
 func (avifFormat) extension() string {
 	return ".avif"
 }
 
+// supportsAnimation returns false because animated AVIF encoding
+// is not supported by any available Go library.
 func (avifFormat) supportsAnimation() bool {
-	return true
+	return false
 }

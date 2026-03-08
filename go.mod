@@ -3,8 +3,10 @@ module go.doolan.dev/site-tools
 go 1.25.1
 
 require (
+	github.com/HugoSmits86/nativewebp v1.2.1
 	github.com/adrg/frontmatter v0.2.0
 	github.com/alecthomas/chroma/v2 v2.23.1
+	github.com/gen2brain/avif v0.4.4
 	github.com/gen2brain/webp v0.5.5
 	github.com/go-git/go-billy/v5 v5.8.0
 	github.com/go-git/go-git/v5 v5.17.0
@@ -19,7 +21,6 @@ require (
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/HugoSmits86/nativewebp v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.4.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
