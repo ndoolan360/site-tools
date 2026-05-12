@@ -66,7 +66,7 @@
   if (!window.crypto || !window.crypto.subtle) {
     if (messageDiv) {
       messageDiv.textContent = 'Your browser does not support the Web Crypto API. Please use a modern browser.';
-      messageDiv.style.color = 'red';
+      messageDiv.style.color = 'var(--red, red)';
     }
     return;
   }
@@ -102,7 +102,7 @@
       } catch (e) {
         if (messageDiv) {
           messageDiv.textContent = 'Incorrect password. Please try again.';
-          messageDiv.style.color = 'red';
+          messageDiv.style.color = 'var(--red, red)';
         }
         if (passwordInput) {
           passwordInput.value = '';
