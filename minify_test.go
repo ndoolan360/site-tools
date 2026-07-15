@@ -1,6 +1,10 @@
 package sitetools
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tdewolff/minify/v2/html"
+)
 
 func TestMinifyTransformer_Transform(t *testing.T) {
 	transformer := MinifyTransformer{}
@@ -70,6 +74,22 @@ func TestMinifyTransformer_Transform_UnknownExtension(t *testing.T) {
 		t.Fatalf("Transform() error = %v", err)
 	}
 	expected := "Some content that should remain unchanged."
+	if string(asset.Data) != expected {
+		t.Errorf("Transform() = %v, want %v", string(asset.Data), expected)
+	}
+}
+
+func TestMinifyTransformer_Transform_CustomOptions(t *testing.T) {
+	asset := &Asset{
+		Path: "/test.html",
+		Data: []byte("<ul><li>a</li><li>b</li></ul>"),
+	}
+
+	transformer := MinifyTransformer{HTML: html.Minifier{KeepEndTags: true}}
+	if err := transformer.Transform(asset); err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	expected := "<ul><li>a</li><li>b</li></ul>"
 	if string(asset.Data) != expected {
 		t.Errorf("Transform() = %v, want %v", string(asset.Data), expected)
 	}
