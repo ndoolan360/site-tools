@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"mime"
 	"path"
-	"sync"
 
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/css"
@@ -14,23 +13,28 @@ import (
 	"github.com/tdewolff/minify/v2/xml"
 )
 
-type MinifyTransformer struct{}
+// MinifyTransformer minifies asset contents based on their file extension.
+//
+// The HTML, CSS, JS, SVG, and XML fields expose the underlying minifier
+// options for each supported content type, allowing callers to customize
+// minification behavior. Zero values use each minifier's defaults.
+type MinifyTransformer struct {
+	HTML html.Minifier
+	CSS  css.Minifier
+	JS   js.Minifier
+	SVG  svg.Minifier
+	XML  xml.Minifier
+}
 
-var sharedMinifier *minify.M
-var sharedMinifierOnce sync.Once
-
-func getMinifier() *minify.M {
-	sharedMinifierOnce.Do(func() {
-		sharedMinifier = minify.New()
-		sharedMinifier.Add("text/html", &html.Minifier{KeepEndTags: true})
-		sharedMinifier.Add("text/css", &css.Minifier{})
-		sharedMinifier.Add("text/javascript", &js.Minifier{})
-		sharedMinifier.Add("image/svg+xml", &svg.Minifier{})
-		sharedMinifier.Add("application/xml", &xml.Minifier{})
-		sharedMinifier.Add("text/xml", &xml.Minifier{})
-	})
-
-	return sharedMinifier
+func (m MinifyTransformer) buildMinifier() *minify.M {
+	mm := minify.New()
+	mm.Add("text/html", &m.HTML)
+	mm.Add("text/css", &m.CSS)
+	mm.Add("text/javascript", &m.JS)
+	mm.Add("image/svg+xml", &m.SVG)
+	mm.Add("application/xml", &m.XML)
+	mm.Add("text/xml", &m.XML)
+	return mm
 }
 
 func (m MinifyTransformer) Transform(asset *Asset) error {
@@ -41,7 +45,7 @@ func (m MinifyTransformer) Transform(asset *Asset) error {
 		return nil
 	}
 
-	minified, err := getMinifier().Bytes(mimeType, asset.Data)
+	minified, err := m.buildMinifier().Bytes(mimeType, asset.Data)
 	if err != nil {
 		if err == minify.ErrNotExist {
 			return nil

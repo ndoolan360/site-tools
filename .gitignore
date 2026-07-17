@@ -16,3 +16,4 @@
 
 # assets are an exception
 !assets/**
+!test_assets/**

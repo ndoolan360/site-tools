@@ -1,9 +1,12 @@
 package sitetools
 
 import (
+	"bytes"
 	"encoding/base64"
 	"strings"
 	"testing"
+
+	"filippo.io/age"
 )
 
 func newEncryptionTemplate() *Asset {
@@ -29,8 +32,10 @@ func TestEncryptionTransformer_UsesFixedSalt(t *testing.T) {
 
 	transformer := EncryptionTransformer{
 		Template: template,
-		Password: "test-password",
-		Salt:     salt,
+		Algorithm: &AESGCMEncryption{
+			Password: "test-password",
+			Salt:     salt,
+		},
 	}
 
 	asset := &Asset{
@@ -54,8 +59,10 @@ func TestEncryptionTransformer_ReusesFixedSaltAcrossAssets(t *testing.T) {
 
 	transformer := EncryptionTransformer{
 		Template: template,
-		Password: "test-password",
-		Salt:     salt,
+		Algorithm: &AESGCMEncryption{
+			Password: "test-password",
+			Salt:     salt,
+		},
 	}
 
 	asset1 := &Asset{
@@ -83,16 +90,16 @@ func TestEncryptionTransformer_ReusesFixedSaltAcrossAssets(t *testing.T) {
 	}
 }
 
-func TestEncrypt_UsesRandomSaltWhenEmpty(t *testing.T) {
+func TestEncryptAESGCM_UsesRandomSaltWhenEmpty(t *testing.T) {
 	data := []byte("test content")
 	password := "test-password"
 	iterations := 100000
 
-	_, salt1, err := encrypt(data, password, iterations, nil)
+	_, salt1, err := encryptAESGCM(data, password, iterations, nil)
 	if err != nil {
 		t.Fatalf("encryption failed: %v", err)
 	}
-	_, salt2, err := encrypt(data, password, iterations, nil)
+	_, salt2, err := encryptAESGCM(data, password, iterations, nil)
 	if err != nil {
 		t.Fatalf("encryption failed: %v", err)
 	}
@@ -106,8 +113,8 @@ func TestEncryptionTransformer_DefaultStorageModeIsNoOp(t *testing.T) {
 	template := newEncryptionTemplate()
 
 	transformer := EncryptionTransformer{
-		Template: template,
-		Password: "test-password",
+		Template:  template,
+		Algorithm: &AESGCMEncryption{Password: "test-password"},
 	}
 
 	asset := &Asset{
@@ -137,7 +144,7 @@ func TestEncryptionTransformer_StorageModeSession(t *testing.T) {
 
 	transformer := EncryptionTransformer{
 		Template:    template,
-		Password:    "test-password",
+		Algorithm:   &AESGCMEncryption{Password: "test-password"},
 		StorageMode: StoreSession,
 	}
 
@@ -162,7 +169,7 @@ func TestEncryptionTransformer_StorageModeLocal(t *testing.T) {
 
 	transformer := EncryptionTransformer{
 		Template:    template,
-		Password:    "test-password",
+		Algorithm:   &AESGCMEncryption{Password: "test-password"},
 		StorageMode: StoreLocal,
 	}
 
@@ -182,12 +189,157 @@ func TestEncryptionTransformer_StorageModeLocal(t *testing.T) {
 	}
 }
 
-func TestEncryptionTransformer_DerivedKeyCachingHooksPresent(t *testing.T) {
+func TestEncryptionTransformer_RequiresAlgorithm(t *testing.T) {
 	template := newEncryptionTemplate()
 
 	transformer := EncryptionTransformer{
 		Template: template,
-		Password: "test-password",
+	}
+
+	asset := &Asset{
+		Path: "/test.html",
+		Data: []byte("<html><body>x</body></html>"),
+	}
+
+	if err := transformer.Transform(asset); err == nil {
+		t.Fatal("expected error when no Algorithm is configured")
+	}
+}
+
+func TestAESGCMEncryption_RequiresPassword(t *testing.T) {
+	template := newEncryptionTemplate()
+
+	transformer := EncryptionTransformer{
+		Template:  template,
+		Algorithm: &AESGCMEncryption{},
+	}
+
+	asset := &Asset{
+		Path: "/test.html",
+		Data: []byte("<html><body>x</body></html>"),
+	}
+
+	if err := transformer.Transform(asset); err == nil {
+		t.Fatal("expected error when AESGCMEncryption has no password")
+	}
+}
+
+func TestAgeEncryption_RequiresPasswordOrRecipients(t *testing.T) {
+	template := newEncryptionTemplate()
+
+	transformer := EncryptionTransformer{
+		Template:  template,
+		Algorithm: &AgeEncryption{},
+	}
+
+	asset := &Asset{
+		Path: "/test.html",
+		Data: []byte("<html><body>secret</body></html>"),
+	}
+
+	if err := transformer.Transform(asset); err == nil {
+		t.Fatal("expected error when neither password nor recipients are provided for age")
+	}
+}
+
+func TestAgeEncryption_PassphraseProducesDecryptableCiphertext(t *testing.T) {
+	template := newEncryptionTemplate()
+	passphrase := "hunter2"
+	plaintext := []byte("<html><body>top secret content</body></html>")
+
+	transformer := EncryptionTransformer{
+		Template:  template,
+		Algorithm: &AgeEncryption{Password: passphrase},
+	}
+
+	asset := &Asset{
+		Path: "/test.html",
+		Data: append([]byte(nil), plaintext...),
+	}
+
+	if err := transformer.Transform(asset); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := string(asset.Data)
+
+	if !strings.Contains(result, "window.ageEncryption") {
+		t.Errorf("expected age decryption script to reference window.ageEncryption")
+	}
+	if !strings.Contains(result, "decrypter.addPassphrase(passphrase)") {
+		t.Errorf("expected age decryption script to call addPassphrase")
+	}
+	// The vendored bundle exposes its global with this exact assignment.
+	if !strings.Contains(result, "var ageEncryption=") {
+		t.Errorf("expected vendored age library bundle to be inlined")
+	}
+
+	// Find the embedded base64 ciphertext and verify it actually decrypts.
+	idx := strings.Index(result, "const encryptedBytes = toBytes('")
+	if idx == -1 {
+		t.Fatalf("could not find encryptedBytes assignment in output")
+	}
+	start := idx + len("const encryptedBytes = toBytes('")
+	end := strings.Index(result[start:], "'")
+	if end == -1 {
+		t.Fatalf("could not find end of encryptedBytes literal")
+	}
+	b64 := result[start : start+end]
+	ciphertext, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		t.Fatalf("could not base64-decode embedded ciphertext: %v", err)
+	}
+
+	identity, err := age.NewScryptIdentity(passphrase)
+	if err != nil {
+		t.Fatalf("could not build scrypt identity: %v", err)
+	}
+	r, err := age.Decrypt(bytes.NewReader(ciphertext), identity)
+	if err != nil {
+		t.Fatalf("age decrypt failed: %v", err)
+	}
+	var decrypted bytes.Buffer
+	if _, err := decrypted.ReadFrom(r); err != nil {
+		t.Fatalf("reading decrypted payload failed: %v", err)
+	}
+	if !bytes.Equal(decrypted.Bytes(), plaintext) {
+		t.Errorf("decrypted bytes mismatch:\n got: %q\nwant: %q", decrypted.Bytes(), plaintext)
+	}
+}
+
+func TestAgeEncryption_BundleIsInlinedAndNoExternalRefs(t *testing.T) {
+	template := newEncryptionTemplate()
+
+	transformer := EncryptionTransformer{
+		Template:  template,
+		Algorithm: &AgeEncryption{Password: "test"},
+	}
+
+	asset := &Asset{
+		Path: "/test.html",
+		Data: []byte("<html><body>x</body></html>"),
+	}
+
+	if err := transformer.Transform(asset); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	result := string(asset.Data)
+
+	if strings.Contains(result, "esm.sh") || strings.Contains(result, "unpkg.com") || strings.Contains(result, "jsdelivr") {
+		t.Errorf("expected no third-party CDN references in output")
+	}
+	if strings.Contains(result, `type="module"`) {
+		t.Errorf("expected age script to no longer be a module (IIFE bundle is used)")
+	}
+}
+
+func TestEncryptionTransformer_DerivedKeyCachingHooksPresent(t *testing.T) {
+	template := newEncryptionTemplate()
+
+	transformer := EncryptionTransformer{
+		Template:  template,
+		Algorithm: &AESGCMEncryption{Password: "test-password"},
 	}
 
 	asset := &Asset{
