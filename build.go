@@ -34,7 +34,7 @@ func (build *Build) walkDir(fsys fs.FS, root string) error {
 			assetPath := strings.TrimPrefix(filepath, root)
 			assetPath = path.Clean("/" + strings.TrimPrefix(assetPath, "/"))
 
-			build.Assets = append(build.Assets, &Asset{
+			build.Assets.Add(Asset{
 				Path: assetPath,
 				Meta: map[string]any{},
 				Data: bytes.TrimSpace(data),
