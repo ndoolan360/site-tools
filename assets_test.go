@@ -54,6 +54,30 @@ func TestAssets_Add(t *testing.T) {
 	}
 }
 
+func TestAssets_Add_ReplacesExistingPath(t *testing.T) {
+	assets := Assets{}
+
+	assets.Add(*newTestAsset("/shared.txt", "base", nil))
+	assets.Add(*newTestAsset("/only-in-first.txt", "keep", nil))
+	assets.Add(*newTestAsset("shared.txt", "override", map[string]any{"layer": "overlay"}))
+
+	if len(assets) != 2 {
+		t.Fatalf("expected 2 assets after overriding a duplicate path, got %d", len(assets))
+	}
+
+	shared := assets.ToMap("layer")["overlay"]
+	if shared == nil {
+		t.Fatalf("expected the overlay asset to have replaced the base asset at /shared.txt")
+	}
+	if string(shared.Data) != "override" {
+		t.Errorf("Asset Data = %s, want override", string(shared.Data))
+	}
+
+	if assets[0].Path != "/shared.txt" {
+		t.Errorf("replacement did not preserve slice position: assets[0].Path = %s, want /shared.txt", assets[0].Path)
+	}
+}
+
 func TestAssets_Transform(t *testing.T) {
 	asset1 := newTestAsset("1.txt", "content", nil)
 	asset2 := newTestAsset("2.txt", "content", nil)

@@ -16,11 +16,25 @@ type Asset struct {
 
 type Assets []*Asset
 
+// Add appends each of newAssets, except that an asset whose cleaned path
+// matches one already present replaces it in place rather than creating a
+// duplicate entry.
 func (assets *Assets) Add(newAssets ...Asset) {
 	for i := range newAssets {
 		cleaned := path.Clean("/" + strings.TrimPrefix(newAssets[i].Path, "/"))
 		newAssets[i].Path = cleaned
-		*assets = append(*assets, &newAssets[i])
+
+		replaced := false
+		for j, existing := range *assets {
+			if existing.Path == cleaned {
+				(*assets)[j] = &newAssets[i]
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			*assets = append(*assets, &newAssets[i])
+		}
 	}
 }
 
