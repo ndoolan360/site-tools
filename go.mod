@@ -20,7 +20,6 @@ require (
 require (
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
-	github.com/dlclark/regexp2 v1.12.0 // indirect
 	github.com/dlclark/regexp2/v2 v2.8.0 // indirect
 	github.com/ebitengine/purego v0.11.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
