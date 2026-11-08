@@ -1,21 +1,23 @@
-package sitetools
+package frontmatter
 
 import (
 	"bytes"
 	"reflect"
 	"testing"
+
+	sitetools "go.doolan.dev/site-tools"
 )
 
 func TestCollectFrontMatter_Transform(t *testing.T) {
 	tests := []struct {
 		name         string
-		asset        *Asset
+		asset        *sitetools.Asset
 		expectedData []byte
 		expectedMeta map[string]any
 	}{
 		{
 			name: "Valid frontmatter with pre-initialized meta",
-			asset: &Asset{
+			asset: &sitetools.Asset{
 				Data: []byte("---\ntitle: Hello\ntags: [go, test]\n---\nContent here"),
 				Meta: make(map[string]any),
 			},
@@ -27,7 +29,7 @@ func TestCollectFrontMatter_Transform(t *testing.T) {
 		},
 		{
 			name: "Valid frontmatter with nil meta",
-			asset: &Asset{
+			asset: &sitetools.Asset{
 				Data: []byte("---\nkey: value\n---\nSome data"),
 			},
 			expectedData: []byte("Some data"),
@@ -37,7 +39,7 @@ func TestCollectFrontMatter_Transform(t *testing.T) {
 		},
 		{
 			name: "No frontmatter",
-			asset: &Asset{
+			asset: &sitetools.Asset{
 				Data: []byte("Just content here"),
 				Meta: make(map[string]any),
 			},
@@ -46,7 +48,7 @@ func TestCollectFrontMatter_Transform(t *testing.T) {
 		},
 		{
 			name: "Existing meta gets merged, frontmatter overwrites",
-			asset: &Asset{
+			asset: &sitetools.Asset{
 				Data: []byte("---\ntitle: New Title\nauthor: Gem\n---\nMore content"),
 				Meta: map[string]any{
 					"existingKey": "existingValue",
@@ -88,7 +90,7 @@ func TestCollectFrontMatter_Transform(t *testing.T) {
 }
 
 func TestCollectFrontMatter_MalformedFrontMatter(t *testing.T) {
-	asset := &Asset{
+	asset := &sitetools.Asset{
 		Data: []byte("{\n'title': 'Unclosed string\n}\n\nContent"),
 	}
 	transformer := CollectFrontMatter{}

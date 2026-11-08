@@ -1,4 +1,4 @@
-package sitetools
+package markdown
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	goldmark_renderer "github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/util"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 type Extensions = []goldmark.Extender
@@ -26,6 +27,8 @@ type MarkdownTransformer struct {
 	ParserOptions
 	RenderOptions
 }
+
+var _ sitetools.Transformer = MarkdownTransformer{}
 
 func (p MarkdownTransformer) newGoldmark() goldmark.Markdown {
 	return goldmark.New(
@@ -62,7 +65,7 @@ func (p MarkdownTransformer) newGoldmark() goldmark.Markdown {
 	)
 }
 
-func (p MarkdownTransformer) Transform(asset *Asset) error {
+func (p MarkdownTransformer) Transform(asset *sitetools.Asset) error {
 	if path.Ext(asset.Path) != ".md" {
 		return nil
 	}

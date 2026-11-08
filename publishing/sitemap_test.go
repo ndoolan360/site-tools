@@ -1,25 +1,27 @@
-package sitetools
+package publishing
 
 import (
 	"strings"
 	"testing"
+
+	sitetools "go.doolan.dev/site-tools"
 )
 
 func TestAddSitemap(t *testing.T) {
-	build := &Build{
-		Assets: Assets{
-			&Asset{Path: "/index.html"},
-			&Asset{Path: "/about.html"},
-			&Asset{Path: "/contact.html"},
-			&Asset{Path: "/styles.css"},
+	build := &sitetools.Build{
+		Assets: sitetools.Assets{
+			&sitetools.Asset{Path: "/index.html"},
+			&sitetools.Asset{Path: "/about.html"},
+			&sitetools.Asset{Path: "/contact.html"},
+			&sitetools.Asset{Path: "/styles.css"},
 		},
 	}
 
-	err := build.AddSitemap("https://test.com")
+	err := AddSitemap(build, "https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	sitemap := build.Assets.Filter(WithPath("/sitemap.xml"))[0]
+	sitemap := build.Assets.Filter(sitetools.WithPath("/sitemap.xml"))[0]
 	if sitemap == nil {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
@@ -40,22 +42,22 @@ func TestAddSitemap(t *testing.T) {
 }
 
 func TestAddSitemap_WithExclusion(t *testing.T) {
-	build := &Build{
-		Assets: Assets{
-			&Asset{Path: "/index.html", Meta: map[string]any{"SitemapPriority": 1.0}},
-			&Asset{Path: "/important.html", Meta: map[string]any{"SitemapPriority": "0.8"}},
-			&Asset{Path: "/about.html", Meta: map[string]any{"LastModified": "2025-08-02"}},
-			&Asset{Path: "/contact.html", Meta: map[string]any{"SitemapExclude": false}},
-			&Asset{Path: "/private.html", Meta: map[string]any{"SitemapExclude": true}},
-			&Asset{Path: "/styles.css", Meta: map[string]any{"SitemapChangeFreq": "never"}},
+	build := &sitetools.Build{
+		Assets: sitetools.Assets{
+			&sitetools.Asset{Path: "/index.html", Meta: map[string]any{"SitemapPriority": 1.0}},
+			&sitetools.Asset{Path: "/important.html", Meta: map[string]any{"SitemapPriority": "0.8"}},
+			&sitetools.Asset{Path: "/about.html", Meta: map[string]any{"LastModified": "2025-08-02"}},
+			&sitetools.Asset{Path: "/contact.html", Meta: map[string]any{"SitemapExclude": false}},
+			&sitetools.Asset{Path: "/private.html", Meta: map[string]any{"SitemapExclude": true}},
+			&sitetools.Asset{Path: "/styles.css", Meta: map[string]any{"SitemapChangeFreq": "never"}},
 		},
 	}
 
-	err := build.AddSitemap("https://test.com")
+	err := AddSitemap(build, "https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	sitemap := build.Assets.Filter(WithPath("/sitemap.xml"))[0]
+	sitemap := build.Assets.Filter(sitetools.WithPath("/sitemap.xml"))[0]
 	if sitemap == nil {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
@@ -66,21 +68,66 @@ func TestAddSitemap_WithExclusion(t *testing.T) {
 	}
 }
 
-func TestAddSitemap_EscapingAndPriorityTypes(t *testing.T) {
-	build := &Build{
-		Assets: Assets{
-			&Asset{Path: "/search?q=a&b", Meta: map[string]any{"SitemapPriority": float32(0.5)}},
-			&Asset{Path: "/int.html", Meta: map[string]any{"SitemapPriority": 2}},
-			&Asset{Path: "/int32.html", Meta: map[string]any{"SitemapPriority": int32(3)}},
-			&Asset{Path: "/int64.html", Meta: map[string]any{"SitemapPriority": int64(4)}},
+func TestAddSitemap_WithExtensions(t *testing.T) {
+	cases := []struct {
+		name       string
+		extensions []string
+		wantURLs   string
+	}{
+		{
+			name:       "matching assets still respect exclusion",
+			extensions: []string{".html"},
+			wantURLs:   "<url><loc>https://test.com/index.html</loc></url>",
+		},
+		{
+			name:       "no matching assets still produces an empty sitemap",
+			extensions: []string{".png"},
 		},
 	}
 
-	err := build.AddSitemap("https://test.com")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			build := &sitetools.Build{
+				Assets: sitetools.Assets{
+					&sitetools.Asset{Path: "/index.html"},
+					&sitetools.Asset{Path: "/private.html", Meta: map[string]any{"SitemapExclude": true}},
+					&sitetools.Asset{Path: "/styles.css"},
+				},
+			}
+
+			if err := AddSitemap(build, "https://test.com", sitetools.WithExtensions(tc.extensions...)); err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			sitemaps := build.Assets.Filter(sitetools.WithPath("/sitemap.xml"))
+			if len(sitemaps) != 1 {
+				t.Fatalf("Expected one sitemap asset, got %d", len(sitemaps))
+			}
+			want := `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` + tc.wantURLs + `</urlset>`
+			if got := string(sitemaps[0].Data); got != want {
+				t.Errorf("Sitemap data does not match expected.\nGot:\n%s\nExpected:\n%s", got, want)
+			}
+			if len(build.Assets) != 4 {
+				t.Errorf("Expected original assets plus sitemap, got %d assets", len(build.Assets))
+			}
+		})
+	}
+}
+
+func TestAddSitemap_EscapingAndPriorityTypes(t *testing.T) {
+	build := &sitetools.Build{
+		Assets: sitetools.Assets{
+			&sitetools.Asset{Path: "/search?q=a&b", Meta: map[string]any{"SitemapPriority": float32(0.5)}},
+			&sitetools.Asset{Path: "/int.html", Meta: map[string]any{"SitemapPriority": 2}},
+			&sitetools.Asset{Path: "/int32.html", Meta: map[string]any{"SitemapPriority": int32(3)}},
+			&sitetools.Asset{Path: "/int64.html", Meta: map[string]any{"SitemapPriority": int64(4)}},
+		},
+	}
+
+	err := AddSitemap(build, "https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	sitemap := build.Assets.Filter(WithPath("/sitemap.xml"))[0]
+	sitemap := build.Assets.Filter(sitetools.WithPath("/sitemap.xml"))[0]
 	if sitemap == nil {
 		t.Fatal("Expected sitemap asset, got nil")
 	}
@@ -104,9 +151,9 @@ func TestAddSitemap_EscapingAndPriorityTypes(t *testing.T) {
 }
 
 func TestAddSitemap_EmptyBuild(t *testing.T) {
-	build := &Build{Assets: Assets{}}
+	build := &sitetools.Build{Assets: sitetools.Assets{}}
 
-	err := build.AddSitemap("https://test.com")
+	err := AddSitemap(build, "https://test.com")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -117,13 +164,14 @@ func TestAddSitemap_EmptyBuild(t *testing.T) {
 }
 
 func TestAddRobotsTxt(t *testing.T) {
-	build := &Build{
-		Assets: Assets{
-			&Asset{Path: "/index.html"},
+	build := &sitetools.Build{
+		Assets: sitetools.Assets{
+			&sitetools.Asset{Path: "/index.html"},
 		},
 	}
 
-	err := build.AddRobotsTxt(
+	err := AddRobotsTxt(
+		build,
 		"https://example.com/sitemap.xml",
 		"/private",
 		"/temp",
@@ -131,7 +179,7 @@ func TestAddRobotsTxt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	robots := build.Assets.Filter(WithPath("/robots.txt"))[0]
+	robots := build.Assets.Filter(sitetools.WithPath("/robots.txt"))[0]
 	if robots == nil {
 		t.Fatal("Expected robots.txt asset, got nil")
 	}
@@ -153,17 +201,17 @@ func TestAddRobotsTxt(t *testing.T) {
 }
 
 func TestAddRobotsTxt_Default(t *testing.T) {
-	build := &Build{
-		Assets: Assets{
-			&Asset{Path: "/index.html"},
+	build := &sitetools.Build{
+		Assets: sitetools.Assets{
+			&sitetools.Asset{Path: "/index.html"},
 		},
 	}
 
-	err := build.AddRobotsTxt("")
+	err := AddRobotsTxt(build, "")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	robots := build.Assets.Filter(WithPath("/robots.txt"))[0]
+	robots := build.Assets.Filter(sitetools.WithPath("/robots.txt"))[0]
 	if robots == nil {
 		t.Fatal("Expected robots.txt asset, got nil")
 	}
@@ -176,17 +224,17 @@ func TestAddRobotsTxt_Default(t *testing.T) {
 }
 
 func TestAddRobotsTxt_GuardCallerDefiningPrefix(t *testing.T) {
-	build := &Build{
-		Assets: Assets{
-			&Asset{Path: "/index.html"},
+	build := &sitetools.Build{
+		Assets: sitetools.Assets{
+			&sitetools.Asset{Path: "/index.html"},
 		},
 	}
 
-	err := build.AddRobotsTxt("", "Disallow: /private", "Disallow: /temp")
+	err := AddRobotsTxt(build, "", "Disallow: /private", "Disallow: /temp")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	robots := build.Assets.Filter(WithPath("/robots.txt"))[0]
+	robots := build.Assets.Filter(sitetools.WithPath("/robots.txt"))[0]
 	if robots == nil {
 		t.Fatal("Expected robots.txt asset, got nil")
 	}
@@ -199,9 +247,9 @@ func TestAddRobotsTxt_GuardCallerDefiningPrefix(t *testing.T) {
 }
 
 func TestAddRobotsTxt_EmptyBuild(t *testing.T) {
-	build := &Build{Assets: Assets{}}
+	build := &sitetools.Build{Assets: sitetools.Assets{}}
 
-	err := build.AddRobotsTxt("", "/private")
+	err := AddRobotsTxt(build, "", "/private")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

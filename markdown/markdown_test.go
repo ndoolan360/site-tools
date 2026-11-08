@@ -1,4 +1,4 @@
-package sitetools
+package markdown
 
 import (
 	"bufio"
@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 func TestMarkdownTransformer_TransformMarkdown(t *testing.T) {
 	transformer := MarkdownTransformer{}
 
-	asset := &Asset{
+	asset := &sitetools.Asset{
 		Path: "test.md",
 		Data: []byte("# Hello"),
 	}
@@ -32,7 +33,7 @@ func TestMarkdownTransformer_TransformMarkdown(t *testing.T) {
 func TestMarkdownTransformer_IgnoresNonMarkdown(t *testing.T) {
 	transformer := MarkdownTransformer{}
 
-	asset := &Asset{
+	asset := &sitetools.Asset{
 		Path: "test.txt",
 		Data: []byte("Just some text."),
 	}

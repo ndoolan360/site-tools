@@ -1,4 +1,4 @@
-package sitetools
+package frontmatter
 
 import (
 	"bytes"
@@ -6,11 +6,14 @@ import (
 	"maps"
 
 	"github.com/adrg/frontmatter"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 type CollectFrontMatter struct{}
 
-func (p CollectFrontMatter) Transform(asset *Asset) error {
+var _ sitetools.Transformer = CollectFrontMatter{}
+
+func (p CollectFrontMatter) Transform(asset *sitetools.Asset) error {
 	var meta map[string]any
 
 	rest, err := frontmatter.Parse(bytes.NewReader(asset.Data), &meta)

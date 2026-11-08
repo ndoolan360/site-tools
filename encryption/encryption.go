@@ -1,9 +1,10 @@
-package sitetools
+// Package encryption encrypts page content for client-side decryption.
+package encryption
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/pbkdf2"
 	"crypto/rand"
 	"crypto/sha256"
 	_ "embed"
@@ -13,18 +14,11 @@ import (
 	"strconv"
 	"strings"
 
-	"filippo.io/age"
-	"golang.org/x/crypto/pbkdf2"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 //go:embed assets/encryption_decrypt_script.js
 var decryptScriptTemplate []byte
-
-//go:embed assets/encryption_decrypt_script_age.js
-var decryptScriptAgeTemplate []byte
-
-//go:embed assets/age-encryption@0.3.0.decrypt-only.bundle.min.js
-var ageEncryptionBundle []byte
 
 type StorageMode string
 
@@ -58,10 +52,10 @@ type PreambleProvider interface {
 // EncryptionTransformer encrypts page content with client-side decryption.
 //
 // All algorithm-specific configuration lives on the Algorithm value (see
-// AESGCMEncryption and AgeEncryption). The fields on the transformer itself
+// AESGCMEncryption or the optional encryption/age package). The fields on the transformer itself
 // only configure the surrounding template wiring.
 type EncryptionTransformer struct {
-	Template *Asset
+	Template *sitetools.Asset
 	// Algorithm selects the encryption scheme. Required.
 	Algorithm EncryptionAlgorithm
 	// PasswordInputID is the ID of the password input element in the template (default: "password")
@@ -72,11 +66,16 @@ type EncryptionTransformer struct {
 	ContentID string
 	// StorageMode determines where the decrypted contents are stored (default: StoreNone)
 	StorageMode StorageMode
-	// MinifyScript determines if the script injected into the password template is minified (default: false)
-	MinifyScript bool
+	// ScriptTransformer optionally transforms the rendered decryption JavaScript.
+	// It receives an asset with path "encryption_decrypt_script.js" after placeholder
+	// replacement. Nil leaves the script unchanged. Algorithm preambles are not transformed.
+	ScriptTransformer sitetools.Transformer
 }
 
-func (t EncryptionTransformer) Transform(asset *Asset) error {
+var _ sitetools.Transformer = EncryptionTransformer{}
+var _ EncryptionAlgorithm = (*AESGCMEncryption)(nil)
+
+func (t EncryptionTransformer) Transform(asset *sitetools.Asset) error {
 	if t.Template == nil {
 		return fmt.Errorf("encryption template is required")
 	}
@@ -129,7 +128,7 @@ func (t EncryptionTransformer) Transform(asset *Asset) error {
 		replacements[k] = v
 	}
 
-	decryptionScript, err := renderDecryptionScript(t.Algorithm.ScriptTemplate(), replacements, t.MinifyScript)
+	decryptionScript, err := renderDecryptionScript(t.Algorithm.ScriptTemplate(), replacements, t.ScriptTransformer)
 	if err != nil {
 		return fmt.Errorf("failed to generate decryption script: %w", err)
 	}
@@ -181,17 +180,17 @@ func escapeScriptBody(s string) string {
 }
 
 // renderDecryptionScript applies replacements to the given JS template and
-// optionally minifies the result.
-func renderDecryptionScript(template []byte, replacements map[string]string, minify bool) (string, error) {
-	scriptAsset := &Asset{
+// optionally transforms the result.
+func renderDecryptionScript(template []byte, replacements map[string]string, transformer sitetools.Transformer) (string, error) {
+	scriptAsset := &sitetools.Asset{
 		Path: "encryption_decrypt_script.js",
 		Data: template,
 	}
-	if err := (ReplacerTransformer{Replacements: replacements}).Transform(scriptAsset); err != nil {
+	if err := (sitetools.ReplacerTransformer{Replacements: replacements}).Transform(scriptAsset); err != nil {
 		return "", err
 	}
-	if minify {
-		if err := (MinifyTransformer{}).Transform(scriptAsset); err != nil {
+	if transformer != nil {
+		if err := transformer.Transform(scriptAsset); err != nil {
 			return "", err
 		}
 	}
@@ -256,7 +255,10 @@ func encryptAESGCM(data []byte, password string, iterations int, salt []byte) ([
 		salt = append([]byte(nil), salt...)
 	}
 
-	key := pbkdf2.Key([]byte(password), salt, iterations, 32, sha256.New)
+	key, err := pbkdf2.Key(sha256.New, password, salt, iterations, 32)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to derive AES-GCM key: %w", err)
+	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -274,58 +276,3 @@ func encryptAESGCM(data []byte, password string, iterations int, salt []byte) ([
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
 	return ciphertext, salt, nil
 }
-
-// AgeEncryption encrypts content using the age file format (filippo.io/age).
-// Decryption in the browser is performed with a vendored copy of the typage
-// library (bundled into the page; no network access required at decrypt time).
-type AgeEncryption struct {
-	// Password, if non-empty, adds a scrypt passphrase recipient. The client-
-	// side decryption script always prompts for and decrypts with a passphrase.
-	Password string
-	// Recipients lists additional age recipients (e.g. "age1..." X25519 keys).
-	// The bundled decryption script does not handle X25519/SSH identities; if
-	// you only configure Recipients you'll need a custom script template.
-	Recipients []string
-}
-
-func (a *AgeEncryption) Encrypt(data []byte) ([]byte, map[string]string, error) {
-	if a.Password == "" && len(a.Recipients) == 0 {
-		return nil, nil, fmt.Errorf("age encryption requires a Password and/or Recipients")
-	}
-
-	var recipients []age.Recipient
-	if a.Password != "" {
-		r, err := age.NewScryptRecipient(a.Password)
-		if err != nil {
-			return nil, nil, fmt.Errorf("invalid scrypt passphrase: %w", err)
-		}
-		recipients = append(recipients, r)
-	}
-	for _, s := range a.Recipients {
-		r, err := age.ParseX25519Recipient(s)
-		if err != nil {
-			return nil, nil, fmt.Errorf("invalid age recipient %q: %w", s, err)
-		}
-		recipients = append(recipients, r)
-	}
-
-	var buf bytes.Buffer
-	w, err := age.Encrypt(&buf, recipients...)
-	if err != nil {
-		return nil, nil, err
-	}
-	if _, err := w.Write(data); err != nil {
-		return nil, nil, err
-	}
-	if err := w.Close(); err != nil {
-		return nil, nil, err
-	}
-
-	return buf.Bytes(), nil, nil
-}
-
-func (a *AgeEncryption) ScriptTemplate() []byte { return decryptScriptAgeTemplate }
-
-// PreambleScript returns the vendored, minified typage IIFE bundle which
-// exposes the library on window.ageEncryption.
-func (a *AgeEncryption) PreambleScript() []byte { return ageEncryptionBundle }
