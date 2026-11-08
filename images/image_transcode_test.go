@@ -1,4 +1,4 @@
-package sitetools
+package images
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 
 	genavif "github.com/gen2brain/avif"
 	genwebp "github.com/gen2brain/webp"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 // ---------- Test Assets ----------
@@ -223,7 +224,7 @@ func TestTranscode_StaticToAllFormats(t *testing.T) {
 		for _, tgt := range targets {
 			name := fmt.Sprintf("%s_to_%s", src.name, tgt.format)
 			t.Run(name, func(t *testing.T) {
-				asset := &Asset{
+				asset := &sitetools.Asset{
 					Data: append([]byte(nil), src.data...),
 					Path: "img/test" + src.ext,
 				}
@@ -258,7 +259,7 @@ func TestTranscode_AnimatedToAnimatedFormats(t *testing.T) {
 		for _, tgt := range targets {
 			name := fmt.Sprintf("%s_to_%s", src.name, tgt.format)
 			t.Run(name, func(t *testing.T) {
-				asset := &Asset{
+				asset := &sitetools.Asset{
 					Data: append([]byte(nil), src.data...),
 					Path: "img/test" + src.ext,
 				}
@@ -295,7 +296,7 @@ func TestTranscode_AnimatedToStatic_FirstFrame(t *testing.T) {
 		for _, tgt := range targets {
 			name := fmt.Sprintf("%s_to_%s", src.name, tgt.format)
 			t.Run(name, func(t *testing.T) {
-				asset := &Asset{
+				asset := &sitetools.Asset{
 					Data: append([]byte(nil), src.data...),
 					Path: "img/test" + src.ext,
 				}
@@ -325,7 +326,7 @@ func TestTranscode_AnimatedToStatic_PreserveError(t *testing.T) {
 		for _, tgt := range targets {
 			name := fmt.Sprintf("%s_to_%s_preserved", src.name, tgt)
 			t.Run(name, func(t *testing.T) {
-				asset := &Asset{
+				asset := &sitetools.Asset{
 					Data: append([]byte(nil), src.data...),
 					Path: "img/test" + src.ext,
 				}
@@ -359,7 +360,7 @@ func TestTranscode_IdentityRoundTrip(t *testing.T) {
 
 		name := fmt.Sprintf("%s_to_same", src.name)
 		t.Run(name, func(t *testing.T) {
-			asset := &Asset{
+			asset := &sitetools.Asset{
 				Data: append([]byte(nil), src.data...),
 				Path: "img/test" + src.ext,
 			}
@@ -387,7 +388,7 @@ func TestTranscode_IdentityRoundTrip(t *testing.T) {
 // ---------- Edge Cases ----------
 
 func TestTranscode_EmptyToFormat(t *testing.T) {
-	asset := &Asset{Data: pngRGB, Path: "test.png"}
+	asset := &sitetools.Asset{Data: pngRGB, Path: "test.png"}
 	err := (ImageTranscoder{}).Transform(asset)
 	if err == nil {
 		t.Fatal("expected error for empty ToFormat")
@@ -395,7 +396,7 @@ func TestTranscode_EmptyToFormat(t *testing.T) {
 }
 
 func TestTranscode_InvalidImageData(t *testing.T) {
-	asset := &Asset{Data: []byte("not an image"), Path: "test.png"}
+	asset := &sitetools.Asset{Data: []byte("not an image"), Path: "test.png"}
 	err := (ImageTranscoder{ToFormat: ImageFormatPNG}).Transform(asset)
 	if err == nil {
 		t.Fatal("expected error for invalid image data")
@@ -403,7 +404,7 @@ func TestTranscode_InvalidImageData(t *testing.T) {
 }
 
 func TestTranscode_UnsupportedFormat(t *testing.T) {
-	asset := &Asset{Data: pngRGB, Path: "test.png"}
+	asset := &sitetools.Asset{Data: pngRGB, Path: "test.png"}
 	err := (ImageTranscoder{ToFormat: "image/tiff"}).Transform(asset)
 	if err == nil {
 		t.Fatal("expected error for unsupported format")
@@ -422,7 +423,7 @@ func TestTranscode_QualityClamping(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			asset := &Asset{
+			asset := &sitetools.Asset{
 				Data: append([]byte(nil), jpgRGB...),
 				Path: "test.jpg",
 			}

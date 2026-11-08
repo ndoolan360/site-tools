@@ -15,5 +15,5 @@
 !*/
 
 # assets are an exception
-!assets/**
-!test_assets/**
+!**/assets/**
+!**/test_assets/**

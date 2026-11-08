@@ -1,9 +1,11 @@
-package sitetools
+package publishing
 
 import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+
+	sitetools "go.doolan.dev/site-tools"
 )
 
 func xmlEscape(value string) string {
@@ -12,7 +14,9 @@ func xmlEscape(value string) string {
 	return buf.String()
 }
 
-func (build *Build) AddSitemap(url string, filters ...Filter) error {
+// AddSitemap adds a sitemap for assets matching the filters, excluding assets
+// marked with SitemapExclude. An empty build is left unchanged.
+func AddSitemap(build *sitetools.Build, url string, filters ...sitetools.Filter) error {
 	if len(build.Assets) == 0 {
 		return nil
 	}
@@ -21,7 +25,7 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 	data = append(data, []byte(`<?xml version="1.0" encoding="UTF-8"?>`)...)
 	data = append(data, []byte(`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`)...)
 
-	filters = append(filters, WithoutMeta("SitemapExclude"))
+	filters = append(filters, sitetools.WithoutMeta("SitemapExclude"))
 
 	for _, asset := range build.Assets.Filter(filters...) {
 		data = append(data, []byte("<url>")...)
@@ -72,7 +76,7 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 
 	data = append(data, []byte(`</urlset>`)...)
 
-	sitemap := &Asset{
+	sitemap := &sitetools.Asset{
 		Path: "/sitemap.xml",
 		Data: data,
 		Meta: map[string]any{"ContentType": "application/xml"},
@@ -84,7 +88,7 @@ func (build *Build) AddSitemap(url string, filters ...Filter) error {
 }
 
 // AddRobotsTxt adds a robots.txt file to the build with the specified additional lines. If no additional lines are provided, it defaults to allowing all user agents.
-func (build *Build) AddRobotsTxt(sitemap string, disallowLines ...string) error {
+func AddRobotsTxt(build *sitetools.Build, sitemap string, disallowLines ...string) error {
 	if len(build.Assets) == 0 {
 		return nil
 	}
@@ -104,7 +108,7 @@ func (build *Build) AddRobotsTxt(sitemap string, disallowLines ...string) error 
 		data = append(data, []byte("Sitemap: "+sitemap+"\n")...)
 	}
 
-	robots := &Asset{
+	robots := &sitetools.Asset{
 		Path: "/robots.txt",
 		Data: data,
 		Meta: map[string]any{"ContentType": "text/plain"},

@@ -1,9 +1,10 @@
-package sitetools
+package minify
 
 import (
 	"testing"
 
 	"github.com/tdewolff/minify/v2/html"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 func TestMinifyTransformer_Transform(t *testing.T) {
@@ -47,7 +48,7 @@ func TestMinifyTransformer_Transform(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			asset := &Asset{
+			asset := &sitetools.Asset{
 				Path: "/test." + tc.extension,
 				Data: []byte(tc.input),
 			}
@@ -64,7 +65,7 @@ func TestMinifyTransformer_Transform(t *testing.T) {
 
 func TestMinifyTransformer_Transform_UnknownExtension(t *testing.T) {
 	transformer := MinifyTransformer{}
-	asset := &Asset{
+	asset := &sitetools.Asset{
 		Path: "/test.unknownext",
 		Data: []byte("Some content that should remain unchanged."),
 	}
@@ -80,7 +81,7 @@ func TestMinifyTransformer_Transform_UnknownExtension(t *testing.T) {
 }
 
 func TestMinifyTransformer_Transform_CustomOptions(t *testing.T) {
-	asset := &Asset{
+	asset := &sitetools.Asset{
 		Path: "/test.html",
 		Data: []byte("<ul><li>a</li><li>b</li></ul>"),
 	}

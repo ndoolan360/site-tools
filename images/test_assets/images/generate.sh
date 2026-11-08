@@ -7,7 +7,7 @@
 #   - libwebp tools    (brew install webp)
 #
 # Usage:
-#   cd test_assets/images && bash generate.sh
+#   cd images/test_assets/images && bash generate.sh
 #
 
 set -euo pipefail

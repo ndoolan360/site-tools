@@ -1,30 +1,61 @@
 # site-tools
 
-A small, composable static site builder written in Go. It loads assets from a directory or Git, parses front matter, converts Markdown to HTML with code highlighting, applies templates/components, runs replacements and minification, and writes the result.
+A composable static site builder for Go. Load assets, apply transformers, and write the result. Import only the feature packages you need.
 
-## A brief example
+## Usage
 
 ```go
 package main
 
 import (
+	"log"
 	"os"
 
-	"github.com/ndoolan360/site-tools"
+	sitetools "go.doolan.dev/site-tools"
+	"go.doolan.dev/site-tools/frontmatter"
+	"go.doolan.dev/site-tools/markdown"
+	"go.doolan.dev/site-tools/minify"
 )
 
 func main() {
 	build := sitetools.Build{}
-	_ = build.FromDir(os.DirFS("."), "content")
+	if err := build.FromDir(os.DirFS("."), "content"); err != nil {
+		log.Fatal(err)
+	}
 
-	_ = build.Assets.Transform(
-		sitetools.CollectFrontMatter{},
-		sitetools.MarkdownTransformer{},
-		sitetools.TemplateTransformer{Global: map[string]any{"SiteName": "My Site"}},
-		sitetools.MinifyTransformer{},
-	)
+	if err := build.Assets.Filter(sitetools.WithExtensions(".md")).Transform(
+		frontmatter.CollectFrontMatter{},
+		markdown.MarkdownTransformer{},
+		minify.MinifyTransformer{},
+	); err != nil {
+		log.Fatal(err)
+	}
 
-	_ = build.AddSitemap("https://example.com")
-	_ = build.Assets.Write("public")
+	if err := build.Assets.Write("public"); err != nil {
+		log.Fatal(err)
+	}
 }
+```
+
+Transformers run in the order supplied. `Filter` selects assets without removing them from the build.
+
+## Packages
+
+| Package | Description |
+| --- | --- |
+| [`go.doolan.dev/site-tools`](https://pkg.go.dev/go.doolan.dev/site-tools) | Core assets, build pipelines, filters, templates, and replacements. |
+| [`go.doolan.dev/site-tools/encryption`](https://pkg.go.dev/go.doolan.dev/site-tools/encryption) | Page encryption with AES-GCM and browser-side decryption. |
+| [`go.doolan.dev/site-tools/encryption/age`](https://pkg.go.dev/go.doolan.dev/site-tools/encryption/age) | Optional age encryption backend with bundled browser decryption. |
+| [`go.doolan.dev/site-tools/frontmatter`](https://pkg.go.dev/go.doolan.dev/site-tools/frontmatter) | Front-matter parsing into asset metadata. |
+| [`go.doolan.dev/site-tools/images`](https://pkg.go.dev/go.doolan.dev/site-tools/images) | Image transcoding and SVG inlining. |
+| [`go.doolan.dev/site-tools/markdown`](https://pkg.go.dev/go.doolan.dev/site-tools/markdown) | Markdown rendering with syntax highlighting. |
+| [`go.doolan.dev/site-tools/minify`](https://pkg.go.dev/go.doolan.dev/site-tools/minify) | HTML, CSS, JavaScript, SVG, and XML minification. |
+| [`go.doolan.dev/site-tools/publishing`](https://pkg.go.dev/go.doolan.dev/site-tools/publishing) | Sitemap and robots.txt generation, and copyright notices. |
+
+The core, encryption, and publishing packages use only the standard library. All packages share one `go.mod`.
+
+## Tests
+
+```sh
+go test ./...
 ```

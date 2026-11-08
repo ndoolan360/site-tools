@@ -1,4 +1,4 @@
-package sitetools
+package images
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 	"github.com/HugoSmits86/nativewebp"
 	genavif "github.com/gen2brain/avif"
 	genwebp "github.com/gen2brain/webp"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 type ImageTranscoder struct {
@@ -31,7 +32,9 @@ type ImageTranscoder struct {
 	PreserveAnimated bool
 }
 
-func (it ImageTranscoder) Transform(asset *Asset) error {
+var _ sitetools.Transformer = ImageTranscoder{}
+
+func (it ImageTranscoder) Transform(asset *sitetools.Asset) error {
 	if it.ToFormat == "" {
 		return fmt.Errorf("ToFormat is required")
 	}

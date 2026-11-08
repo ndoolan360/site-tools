@@ -1,4 +1,4 @@
-package sitetools
+package minify
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"github.com/tdewolff/minify/v2/js"
 	"github.com/tdewolff/minify/v2/svg"
 	"github.com/tdewolff/minify/v2/xml"
+	sitetools "go.doolan.dev/site-tools"
 )
 
 // MinifyTransformer minifies asset contents based on their file extension.
@@ -26,6 +27,8 @@ type MinifyTransformer struct {
 	XML  xml.Minifier
 }
 
+var _ sitetools.Transformer = MinifyTransformer{}
+
 func (m MinifyTransformer) buildMinifier() *minify.M {
 	mm := minify.New()
 	mm.Add("text/html", &m.HTML)
@@ -37,7 +40,7 @@ func (m MinifyTransformer) buildMinifier() *minify.M {
 	return mm
 }
 
-func (m MinifyTransformer) Transform(asset *Asset) error {
+func (m MinifyTransformer) Transform(asset *sitetools.Asset) error {
 	fileType := path.Ext(asset.Path)
 	mimeType := mime.TypeByExtension(fileType)
 
