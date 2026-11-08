@@ -47,12 +47,13 @@ Transformers run in the order supplied. `Filter` selects assets without removing
 | [`go.doolan.dev/site-tools/encryption`](https://pkg.go.dev/go.doolan.dev/site-tools/encryption) | Page encryption with AES-GCM and browser-side decryption. |
 | [`go.doolan.dev/site-tools/encryption/age`](https://pkg.go.dev/go.doolan.dev/site-tools/encryption/age) | Optional age encryption backend with bundled browser decryption. |
 | [`go.doolan.dev/site-tools/frontmatter`](https://pkg.go.dev/go.doolan.dev/site-tools/frontmatter) | Front-matter parsing into asset metadata. |
-| [`go.doolan.dev/site-tools/images`](https://pkg.go.dev/go.doolan.dev/site-tools/images) | Image transcoding and SVG inlining. |
+| [`go.doolan.dev/site-tools/images`](https://pkg.go.dev/go.doolan.dev/site-tools/images) | Image transcoding. |
+| [`go.doolan.dev/site-tools/inlinesvg`](https://pkg.go.dev/go.doolan.dev/site-tools/inlinesvg) | SVG inlining in HTML assets. |
 | [`go.doolan.dev/site-tools/markdown`](https://pkg.go.dev/go.doolan.dev/site-tools/markdown) | Markdown rendering with syntax highlighting. |
 | [`go.doolan.dev/site-tools/minify`](https://pkg.go.dev/go.doolan.dev/site-tools/minify) | HTML, CSS, JavaScript, SVG, and XML minification. |
 | [`go.doolan.dev/site-tools/publishing`](https://pkg.go.dev/go.doolan.dev/site-tools/publishing) | Sitemap and robots.txt generation, and comment prefixes. |
 
-The core, encryption, and publishing packages use only the standard library. All packages share one `go.mod`.
+The core, encryption, inlinesvg, and publishing packages use only the standard library. All packages share one `go.mod`.
 
 ## Tests
 
