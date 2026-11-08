@@ -50,7 +50,7 @@ Transformers run in the order supplied. `Filter` selects assets without removing
 | [`go.doolan.dev/site-tools/images`](https://pkg.go.dev/go.doolan.dev/site-tools/images) | Image transcoding and SVG inlining. |
 | [`go.doolan.dev/site-tools/markdown`](https://pkg.go.dev/go.doolan.dev/site-tools/markdown) | Markdown rendering with syntax highlighting. |
 | [`go.doolan.dev/site-tools/minify`](https://pkg.go.dev/go.doolan.dev/site-tools/minify) | HTML, CSS, JavaScript, SVG, and XML minification. |
-| [`go.doolan.dev/site-tools/publishing`](https://pkg.go.dev/go.doolan.dev/site-tools/publishing) | Sitemap and robots.txt generation, and copyright notices. |
+| [`go.doolan.dev/site-tools/publishing`](https://pkg.go.dev/go.doolan.dev/site-tools/publishing) | Sitemap and robots.txt generation, and comment prefixes. |
 
 The core, encryption, and publishing packages use only the standard library. All packages share one `go.mod`.
 
