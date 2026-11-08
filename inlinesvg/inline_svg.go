@@ -1,4 +1,5 @@
-package images
+// Package inlinesvg embeds trusted SVG images directly into HTML assets.
+package inlinesvg
 
 import (
 	"bytes"
